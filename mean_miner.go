@@ -160,25 +160,26 @@ type edgemap struct {
 	orig  uint32
 }
 
-const narray = (easiness / (uint64(nx) * uint64(nx))) * 67 / 64
+const narray = (easiness / (uint64(nx) * uint64(nx))) * 2
 
 type cuckoo struct {
-	counter [uint16(nx) * uint16(nx)]uint16
+	counter [nx][ny]uint16
 	cuckoo  []edgemap
 	sip     *sip
 	dead    [uint64(nx) * uint64(nx) * narray]bool
 	//multi-dimentional array  is VERY SLOW, so uses 1-dimension.
-	matrix [uint64(nx) * uint64(nx) * narray * 5]byte
+	matrix [nx][ny][narray][5]byte
 	// original [nx][nx][]cell //never append or would breaks matrix
 }
 
 func index(x, y uint8, n int, i uint8) uint64 {
 	return (((uint64(x)<<xbits)+uint64(y))*narray+uint64(n))*5 + uint64(i)
 }
-func (c *cuckoo) index(x, y uint8) uint64 {
-	idx := x<<xbits + y
-	return (((uint64(x)<<xbits)+uint64(y))*narray + uint64(c.counter[idx])) * 5
-}
+
+// func (c *cuckoo) index(x, y uint8) uint64 {
+// 	idx := x<<xbits + y
+// 	return (((uint64(x)<<xbits)+uint64(y))*narray + uint64(c.counter[idx])) * 5
+// }
 func newCuckoo(k []byte) *cuckoo {
 	c := &cuckoo{
 		cuckoo: make([]edgemap, 1<<16),
@@ -197,89 +198,92 @@ func (c *cuckoo) buildUnodes() {
 		u0yz := (uint64(u0) & 0x1ffffe) << (ybits + zbits - 1)
 		v0 := (uint64(nonce)&0xfffff)<<(ybits+zbits-1) | u0yz
 		y0 := uint16(nonce >> 26)
-		index0 := (uint16(u0x) << xbits) + y0
-		i0 := ((c.counter[index0] << xbits) + y0) * 5
-		c.matrix[i0] = byte(v0 & 0xff)
-		c.matrix[i0+1] = byte((v0 >> 8) & 0xff)
-		c.matrix[i0+2] = byte((v0 >> 16) & 0xff)
-		c.matrix[i0+3] = byte((v0 >> 24) & 0xff)
-		c.matrix[i0+4] = byte((v0 >> 32) & 0xff)
-		c.counter[index0]++
+		i0 := c.counter[y0][u0x]
+		p0 := &c.matrix[y0][u0x][i0]
+
+		(*p0)[0] = byte(v0 & 0xff)
+		(*p0)[1] = byte((v0 >> 8) & 0xff)
+		(*p0)[2] = byte((v0 >> 16) & 0xff)
+		(*p0)[3] = byte((v0 >> 24) & 0xff)
+		(*p0)[4] = byte((v0 >> 32) & 0xff)
+		c.counter[y0][u0x]++
 
 		u1 := uint32(n1&edgemask) << 1
 		u1x := xmask(u1)
 		u1yz := (uint64(u1) & 0x1ffffe) << (ybits + zbits - 1)
 		v1 := (uint64(nonce+1)&0xfffff)<<(ybits+zbits-1) | u1yz
 		y1 := uint16((nonce + 1) >> 26)
-		index1 := (uint16(u1x) << xbits) + y1
-		i1 := ((c.counter[index1] << xbits) + y1) * 5
-		c.matrix[i1] = byte(v1 & 0xff)
-		c.matrix[i1+1] = byte((v1 >> 8) & 0xff)
-		c.matrix[i1+2] = byte((v1 >> 16) & 0xff)
-		c.matrix[i1+3] = byte((v1 >> 24) & 0xff)
-		c.matrix[i1+4] = byte((v1 >> 32) & 0xff)
-		c.counter[index1]++
+
+		i1 := c.counter[y1][u1x]
+		p1 := &c.matrix[y0][u1x][i1]
+
+		(*p1)[0] = byte(v1 & 0xff)
+		(*p1)[1] = byte((v1 >> 8) & 0xff)
+		(*p1)[2] = byte((v1 >> 16) & 0xff)
+		(*p1)[3] = byte((v1 >> 24) & 0xff)
+		(*p1)[4] = byte((v1 >> 32) & 0xff)
+		c.counter[y1][u1x]++
 	}
 }
 
-func (c *cuckoo) trim0() {
-	ctr := make(counter, 2*(1<<(xbits+ybits-1)))
-	vs := make([]uint32, 0, nedge/(int(nx)))
-	for x := uint8(0); x < nx; x++ {
-		for y := uint8(0); y < ny; y++ {
-			index := uint16(x)<<xbits + uint16(y)
-			for i := uint16(0); i < c.counter[index]; i++ {
-				var v uint32
-				idx := (uint64(x)*uint64(ny)+uint64(y))*5 + uint64(i)
-				v |= uint32(c.matrix[idx])
-				v |= uint32(c.matrix[idx+1]) << 8
-				v |= uint32(c.matrix[idx+2]) << 16
-				v |= uint32(c.matrix[idx+3]&0xf) << 24
-				ctr.incr(v)
-				vs = append(vs, v)
-			}
-		}
-		for y := uint8(0); y < ny; y++ {
-			index := uint16(x)<<xbits + uint16(y)
-			for i := uint16(0); i < c.counter[index]; i++ {
+// func (c *cuckoo) trim0() {
+// 	ctr := make(counter, 2*(1<<(xbits+ybits-1)))
+// 	vs := make([]uint32, 0, nedge/(int(nx)))
+// 	for x := uint8(0); x < nx; x++ {
+// 		for y := uint8(0); y < ny; y++ {
+// 			index := uint16(x)<<xbits + uint16(y)
+// 			for i := uint16(0); i < c.counter[index]; i++ {
+// 				var v uint32
+// 				idx := (uint64(x)*uint64(ny)+uint64(y))*5 + uint64(i)
+// 				v |= uint32(c.matrix[idx])
+// 				v |= uint32(c.matrix[idx+1]) << 8
+// 				v |= uint32(c.matrix[idx+2]) << 16
+// 				v |= uint32(c.matrix[idx+3]&0xf) << 24
+// 				ctr.incr(v)
+// 				vs = append(vs, v)
+// 			}
+// 		}
+// 		for y := uint8(0); y < ny; y++ {
+// 			index := uint16(x)<<xbits + uint16(y)
+// 			for i := uint16(0); i < c.counter[index]; i++ {
 
-			}
-		}
-	}
+// 			}
+// 		}
+// 	}
 
-	for nonce := uint32(0); nonce < easiness; nonce += 2 {
-		n0, n1 := siphashPRF(c.sip.v0, c.sip.v1, c.sip.v2, c.sip.v3,
-			uint64(nonce)<<1, uint64(nonce+1)<<1)
+// 	for nonce := uint32(0); nonce < easiness; nonce += 2 {
+// 		n0, n1 := siphashPRF(c.sip.v0, c.sip.v1, c.sip.v2, c.sip.v3,
+// 			uint64(nonce)<<1, uint64(nonce+1)<<1)
 
-		u0 := uint32(n0&edgemask) << 1
-		u0x := xmask(u0)
-		u0yz := (uint64(u0) & 0x1ffffe) << (ybits + zbits - 1)
-		v0 := (uint64(nonce)&0xfffff)<<(ybits+zbits-1) | u0yz
-		y0 := uint16(nonce >> 26)
-		index0 := uint16(u0x)<<xbits + y0
-		i0 := ((c.counter[index0] << xbits) + y0) * 5
-		c.matrix[i0] = byte(v0 & 0xff)
-		c.matrix[i0+1] = byte((v0 >> 8) & 0xff)
-		c.matrix[i0+2] = byte((v0 >> 16) & 0xff)
-		c.matrix[i0+3] = byte((v0 >> 24) & 0xff)
-		c.matrix[i0+4] = byte((v0 >> 32) & 0xff)
-		c.counter[index0]++
+// 		u0 := uint32(n0&edgemask) << 1
+// 		u0x := xmask(u0)
+// 		u0yz := (uint64(u0) & 0x1ffffe) << (ybits + zbits - 1)
+// 		v0 := (uint64(nonce)&0xfffff)<<(ybits+zbits-1) | u0yz
+// 		y0 := uint16(nonce >> 26)
+// 		index0 := uint16(u0x)<<xbits + y0
+// 		i0 := ((c.counter[index0] << xbits) + y0) * 5
+// 		c.matrix[i0] = byte(v0 & 0xff)
+// 		c.matrix[i0+1] = byte((v0 >> 8) & 0xff)
+// 		c.matrix[i0+2] = byte((v0 >> 16) & 0xff)
+// 		c.matrix[i0+3] = byte((v0 >> 24) & 0xff)
+// 		c.matrix[i0+4] = byte((v0 >> 32) & 0xff)
+// 		c.counter[index0]++
 
-		u1 := uint32(n1&edgemask) << 1
-		u1x := xmask(u1)
-		u1yz := (uint64(u1) & 0x1ffffe) << (ybits + zbits - 1)
-		v1 := (uint64(nonce+1)&0xfffff)<<(ybits+zbits-1) | u1yz
-		y1 := uint16((nonce + 1) >> 26)
-		index1 := uint16(u1x)<<xbits + y1
-		i1 := ((c.counter[index1] << xbits) + y1) * 5
-		c.matrix[i1] = byte(v1 & 0xff)
-		c.matrix[i1+1] = byte((v1 >> 8) & 0xff)
-		c.matrix[i1+2] = byte((v1 >> 16) & 0xff)
-		c.matrix[i1+3] = byte((v1 >> 24) & 0xff)
-		c.matrix[i1+4] = byte((v1 >> 32) & 0xff)
-		c.counter[index1]++
-	}
-}
+// 		u1 := uint32(n1&edgemask) << 1
+// 		u1x := xmask(u1)
+// 		u1yz := (uint64(u1) & 0x1ffffe) << (ybits + zbits - 1)
+// 		v1 := (uint64(nonce+1)&0xfffff)<<(ybits+zbits-1) | u1yz
+// 		y1 := uint16((nonce + 1) >> 26)
+// 		index1 := uint16(u1x)<<xbits + y1
+// 		i1 := ((c.counter[index1] << xbits) + y1) * 5
+// 		c.matrix[i1] = byte(v1 & 0xff)
+// 		c.matrix[i1+1] = byte((v1 >> 8) & 0xff)
+// 		c.matrix[i1+2] = byte((v1 >> 16) & 0xff)
+// 		c.matrix[i1+3] = byte((v1 >> 24) & 0xff)
+// 		c.matrix[i1+4] = byte((v1 >> 32) & 0xff)
+// 		c.counter[index1]++
+// 	}
+// }
 
 /*
 func (c *cuckoo) trimZ(zsort []cell, uorv int, n uint64) {
