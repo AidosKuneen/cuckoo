@@ -34,41 +34,49 @@ const (
 	nnode     = 2 * nedge
 	easiness  = nnode * 0.5
 
-	xbits         = 6
-	ybits         = 6
-	zbits         = edgebits - xbits - ybits
-	yzbits        = ybits + zbits
-	nx     uint8  = 1 << xbits
-	ny     uint8  = 1 << ybits
-	nz     uint16 = 1 << zbits
+	xbits  = 6
+	ybits  = 6
+	zbits  = edgebits - xbits - ybits
+	yzbits = ybits + zbits
+	nx     = 1 << xbits
+	ny     = 1 << ybits
+	nz     = 1 << zbits
 
-	rename0         = 15
-	rename1         = 9
-	nrename0 uint32 = 1 << rename0
-	nrename1 uint32 = 1 << rename1
+	rename0  = 15
+	rename1  = 9
+	nrename0 = 1 << rename0
+	nrename1 = 1 << rename1
+
+	narray = (easiness / (nx * ny)) * 67 / 64
 )
 
-func xmask(v uint32) uint8 {
-	return uint8((v & ((uint32(nx) - 1) << yzbits)) >> yzbits)
+func xmask(v int) int {
+	return (v & ((nx - 1) << yzbits)) >> yzbits
 }
-func ymask(v uint32) uint8 {
-	return uint8((v & ((uint32(ny) - 1) << zbits)) >> zbits)
-}
-func zmask(v uint32) uint16 {
-	return uint16(v & (uint32(nz) - 1))
-}
-func xyz(x, y uint8, z uint16) uint32 {
-	return (uint32(x) << yzbits) | (uint32(y) << zbits) | uint32(z)
+func ymask(v int) int {
+	return (v & ((ny - 1) << zbits)) >> zbits
 }
 
-//assume x+z is under 16 bits
-func xz16(x uint8, z uint16) uint16 {
-	return uint16((uint32(x) << zbits) | uint32(z))
+//truncate last bits
+func zmask(v int) int {
+	return (v & (nz - 2)) >> 1
+}
+
+//truncate last bits
+func yzmask(v int) int {
+	return (v & 0x3ffffe) >> 1
+}
+func xyz(x, y, z, uorv int) int {
+	return ((x<<yzbits)|(y<<zbits)|z)<<1 | uorv
+}
+
+func yz(y, z, uorv int) int {
+	return ((y<<zbits)|z)<<1 | uorv
 }
 
 type counter []byte
 
-func (c counter) incr(v uint32) {
+func (c counter) incr(v uint) {
 	bit0 := c[(v*2)>>3] >> ((v * 2) % 8) & 1
 	bit1 := c[(v*2)>>3] >> (((v * 2) % 8) + 1) & 1
 	if bit1 == 1 {
@@ -81,7 +89,7 @@ func (c counter) incr(v uint32) {
 	}
 	c[(v*2)>>3] |= 1 << ((v * 2) % 8) //bit0=1
 }
-func (c counter) isLeaf(v uint32) bool {
+func (c counter) isLeaf(v uint) bool {
 	bit1 := c[(v*2)>>8] >> (((v * 2) % 8) + 1) & 1
 	if bit1 == 0 {
 		return true
@@ -118,68 +126,57 @@ func (s *sip) nodes(nonce uint32) (uint32, uint32) {
 
 type cell [5]byte
 
-func newcell(uxyz, vxyz uint32) cell {
-	uyz := (uint64(uxyz) & 0x1ffffe) << (ybits + zbits - 1)
-	vyz := (uint64(vxyz) & 0x1ffffe) >> 1
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uyz|vyz)
-	var c cell
-	copy(c[:], b)
+// func newcell(uxyz, vxyz uint32) cell {
+// 	uyz := (uint64(uxyz) & 0x1ffffe) << (ybits + zbits - 1)
+// 	vyz := (uint64(vxyz) & 0x1ffffe) >> 1
+// 	b := make([]byte, 8)
+// 	binary.LittleEndian.PutUint64(b, uyz|vyz)
+// 	var c cell
+// 	copy(c[:], b)
 
-	return c
-}
+// 	return c
+// }
 
-func (ce cell) y(uorv int) uint8 {
-	b := make([]byte, 8)
-	copy(b, ce[:])
-	v := binary.LittleEndian.Uint64(b)
-	bits := (ybits + zbits - 1) * (1 - uint(uorv))
-	return uint8(v>>(bits+zbits-1)) & 0x3f
-}
+// func (ce cell) y(uorv int) uint8 {
+// 	b := make([]byte, 8)
+// 	copy(b, ce[:])
+// 	v := binary.LittleEndian.Uint64(b)
+// 	bits := (ybits + zbits - 1) * (1 - uint(uorv))
+// 	return uint8(v>>(bits+zbits-1)) & 0x3f
+// }
 
-//truncate last bits
-func (ce cell) z(uorv int) uint16 {
-	b := make([]byte, 8)
-	copy(b, ce[:])
-	v := binary.LittleEndian.Uint64(b)
-	bits := (ybits + zbits - 1) * (1 - uint(uorv))
-	return uint16(v>>bits) & 0x4fff
-}
+// //truncate last bits
+// func (ce cell) z(uorv int) uint16 {
+// 	b := make([]byte, 8)
+// 	copy(b, ce[:])
+// 	v := binary.LittleEndian.Uint64(b)
+// 	bits := (ybits + zbits - 1) * (1 - uint(uorv))
+// 	return uint16(v>>bits) & 0x4fff
+// }
 
-//truncate last bits
-func (ce cell) yz(uorv int) uint32 {
-	b := make([]byte, 8)
-	copy(b, ce[:])
-	v := binary.LittleEndian.Uint64(b)
-	bits := (ybits + zbits - 1) * (1 - uint(uorv))
-	return uint32(v>>bits) & 0xfffff
-}
+// //truncate last bits
+// func (ce cell) yz(uorv int) uint32 {
+// 	b := make([]byte, 8)
+// 	copy(b, ce[:])
+// 	v := binary.LittleEndian.Uint64(b)
+// 	bits := (ybits + zbits - 1) * (1 - uint(uorv))
+// 	return uint32(v>>bits) & 0xfffff
+// }
 
 type edgemap struct {
 	index uint16
 	orig  uint32
 }
 
-const narray = (easiness / (uint64(nx) * uint64(nx))) * 2
-
 type cuckoo struct {
-	counter [nx][ny]uint16
-	cuckoo  []edgemap
-	sip     *sip
-	dead    [uint64(nx) * uint64(nx) * narray]bool
-	//multi-dimentional array  is VERY SLOW, so uses 1-dimension.
+	size   [nx][ny]int
+	cuckoo []edgemap
+	sip    *sip
+	dead   [nx][ny][narray]bool
 	matrix [nx][ny][narray][5]byte
 	// original [nx][nx][]cell //never append or would breaks matrix
 }
 
-func index(x, y uint8, n int, i uint8) uint64 {
-	return (((uint64(x)<<xbits)+uint64(y))*narray+uint64(n))*5 + uint64(i)
-}
-
-// func (c *cuckoo) index(x, y uint8) uint64 {
-// 	idx := x<<xbits + y
-// 	return (((uint64(x)<<xbits)+uint64(y))*narray + uint64(c.counter[idx])) * 5
-// }
 func newCuckoo(k []byte) *cuckoo {
 	c := &cuckoo{
 		cuckoo: make([]edgemap, 1<<16),
@@ -188,44 +185,30 @@ func newCuckoo(k []byte) *cuckoo {
 	return c
 }
 
+/*
 func (c *cuckoo) buildUnodes() {
-	for nonce := uint32(0); nonce < easiness; nonce += 2 {
-		n0, n1 := siphashPRF(c.sip.v0, c.sip.v1, c.sip.v2, c.sip.v3,
-			uint64(nonce)<<1, uint64(nonce+1)<<1)
-
-		u0 := uint32(n0&edgemask) << 1
-		u0x := xmask(u0)
-		u0yz := (uint64(u0) & 0x1ffffe) << (ybits + zbits - 1)
-		v0 := (uint64(nonce)&0xfffff)<<(ybits+zbits-1) | u0yz
-		y0 := uint16(nonce >> 26)
-		i0 := c.counter[y0][u0x]
-		p0 := &c.matrix[y0][u0x][i0]
-
-		(*p0)[0] = byte(v0 & 0xff)
-		(*p0)[1] = byte((v0 >> 8) & 0xff)
-		(*p0)[2] = byte((v0 >> 16) & 0xff)
-		(*p0)[3] = byte((v0 >> 24) & 0xff)
-		(*p0)[4] = byte((v0 >> 32) & 0xff)
-		c.counter[y0][u0x]++
-
-		u1 := uint32(n1&edgemask) << 1
-		u1x := xmask(u1)
-		u1yz := (uint64(u1) & 0x1ffffe) << (ybits + zbits - 1)
-		v1 := (uint64(nonce+1)&0xfffff)<<(ybits+zbits-1) | u1yz
-		y1 := uint16((nonce + 1) >> 26)
-
-		i1 := c.counter[y1][u1x]
-		p1 := &c.matrix[y0][u1x][i1]
-
-		(*p1)[0] = byte(v1 & 0xff)
-		(*p1)[1] = byte((v1 >> 8) & 0xff)
-		(*p1)[2] = byte((v1 >> 16) & 0xff)
-		(*p1)[3] = byte((v1 >> 24) & 0xff)
-		(*p1)[4] = byte((v1 >> 32) & 0xff)
-		c.counter[y1][u1x]++
+	var nodes [16]uint64
+	for nonce := 0; nonce < easiness; nonce += 16 {
+		siphashPRF64(c.sip.v0, c.sip.v1, c.sip.v2, c.sip.v3, uint64(nonce), 0, &nodes)
+		for i, n := range nodes {
+			n0 := int(n)
+			u0 := (n0 & edgemask) << 1
+			u0x := xmask(u0)
+			u0yz := (u0 & 0x1ffffe) << (ybits + zbits - 1)
+			non := (nonce + i) << 1
+			y := (non >> (edgebits - ybits + 1))
+			v0 := (non&0xfffff)<<(ybits+zbits-1) | u0yz
+			size0 := c.size[u0x][y]
+			c.matrix[u0x][y][size0][0] = byte(v0 & 0xff)
+			c.matrix[u0x][y][size0][1] = byte((v0 >> 8) & 0xff)
+			c.matrix[u0x][y][size0][2] = byte((v0 >> 16) & 0xff)
+			c.matrix[u0x][y][size0][3] = byte((v0 >> 24) & 0xff)
+			c.matrix[u0x][y][size0][4] = byte((v0 >> 32) & 0xff)
+			c.size[u0x][y]++
+		}
 	}
 }
-
+*/
 // func (c *cuckoo) trim0() {
 // 	ctr := make(counter, 2*(1<<(xbits+ybits-1)))
 // 	vs := make([]uint32, 0, nedge/(int(nx)))
@@ -251,39 +234,46 @@ func (c *cuckoo) buildUnodes() {
 // 		}
 // 	}
 
-// 	for nonce := uint32(0); nonce < easiness; nonce += 2 {
-// 		n0, n1 := siphashPRF(c.sip.v0, c.sip.v1, c.sip.v2, c.sip.v3,
-// 			uint64(nonce)<<1, uint64(nonce+1)<<1)
+func (c *cuckoo) buildNodes() {
+	var nodesU [16]uint64
+	var nodesV [16]uint64
+	for nonce := 0; nonce < easiness; nonce += 16 {
+		siphashPRF64(c.sip.v0, c.sip.v1, c.sip.v2, c.sip.v3, uint64(nonce), 0, &nodesU)
+		siphashPRF64(c.sip.v0, c.sip.v1, c.sip.v2, c.sip.v3, uint64(nonce), 1, &nodesV)
+		for i := range nodesU {
+			u0 := int(nodesU[i]&edgemask) << 1
+			u0x := xmask(u0)
+			u0yz := yzmask(u0)
 
-// 		u0 := uint32(n0&edgemask) << 1
-// 		u0x := xmask(u0)
-// 		u0yz := (uint64(u0) & 0x1ffffe) << (ybits + zbits - 1)
-// 		v0 := (uint64(nonce)&0xfffff)<<(ybits+zbits-1) | u0yz
-// 		y0 := uint16(nonce >> 26)
-// 		index0 := uint16(u0x)<<xbits + y0
-// 		i0 := ((c.counter[index0] << xbits) + y0) * 5
-// 		c.matrix[i0] = byte(v0 & 0xff)
-// 		c.matrix[i0+1] = byte((v0 >> 8) & 0xff)
-// 		c.matrix[i0+2] = byte((v0 >> 16) & 0xff)
-// 		c.matrix[i0+3] = byte((v0 >> 24) & 0xff)
-// 		c.matrix[i0+4] = byte((v0 >> 32) & 0xff)
-// 		c.counter[index0]++
+			v0 := int(nodesV[i]&edgemask) << 1
+			v0x := xmask(v0)
+			v0yz := yzmask(v0)
 
-// 		u1 := uint32(n1&edgemask) << 1
-// 		u1x := xmask(u1)
-// 		u1yz := (uint64(u1) & 0x1ffffe) << (ybits + zbits - 1)
-// 		v1 := (uint64(nonce+1)&0xfffff)<<(ybits+zbits-1) | u1yz
-// 		y1 := uint16((nonce + 1) >> 26)
-// 		index1 := uint16(u1x)<<xbits + y1
-// 		i1 := ((c.counter[index1] << xbits) + y1) * 5
-// 		c.matrix[i1] = byte(v1 & 0xff)
-// 		c.matrix[i1+1] = byte((v1 >> 8) & 0xff)
-// 		c.matrix[i1+2] = byte((v1 >> 16) & 0xff)
-// 		c.matrix[i1+3] = byte((v1 >> 24) & 0xff)
-// 		c.matrix[i1+4] = byte((v1 >> 32) & 0xff)
-// 		c.counter[index1]++
-// 	}
-// }
+			val := uint(u0yz)<<20 | uint(v0yz)
+
+			idx := c.size[u0x][v0x]
+			// dw := (*[5]byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&c.matrix[0][0][0][0])) +
+			// 	uintptr(((u0x*ny+v0x)*narray+idx)*5)))
+
+			// dw[0] = byte(val & 0xff)
+			// dw[1] = byte((val >> 8) & 0xff)
+			// dw[2] = byte((val >> 16) & 0xff)
+			// dw[3] = byte((val >> 24) & 0xff)
+			// dw[4] = byte((val >> 32) & 0xff)
+			// log.Println(val&0xff, c.matrix[u0x][v0x][idx][0])
+			// log.Println((val>>8)&0xff, c.matrix[u0x][v0x][idx][1])
+			// log.Println((val>>16)&0xff, c.matrix[u0x][v0x][idx][2])
+			// log.Println((val>>24)&0xff, c.matrix[u0x][v0x][idx][3])
+			// log.Println((val>>32)&0xff, c.matrix[u0x][v0x][idx][4])
+			c.matrix[u0x][v0x][idx][1] = byte((val >> 0) & 0xff)
+			c.matrix[u0x][v0x][idx][1] = byte((val >> 8) & 0xff)
+			c.matrix[u0x][v0x][idx][2] = byte((val >> 16) & 0xff)
+			c.matrix[u0x][v0x][idx][3] = byte((val >> 24) & 0xff)
+			c.matrix[u0x][v0x][idx][4] = byte((val >> 32) & 0xff)
+			c.size[u0x][v0x]++
+		}
+	}
+}
 
 /*
 func (c *cuckoo) trimZ(zsort []cell, uorv int, n uint64) {
@@ -442,7 +432,7 @@ func (c *cuckoo) trimYZ0(uorv int) {
 
 func (c *cuckoo) worker() ([]uint32, bool) {
 	// status := first
-	c.buildUnodes()
+	c.buildNodes()
 	return nil, true
 }
 

@@ -1,6 +1,4 @@
-//+build !amd64
 // Copyright (c) 2017 Aidos Developer
-
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -19,23 +17,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Original license from https://github.com/dchest/siphash
+// Written in 2012 by Dmitry Chestnykh.
+//
+// To the extent possible under law, the author have dedicated all copyright
+// and related and neighboring rights to this software to the public domain
+// worldwide. This software is distributed without any warranty.
+// http://creativecommons.org/publicdomain/zero/1.0/
+
 package cuckoo
 
-func siphash(k0, k1, b0, b1 uint64) (uint64, uint64) {
-	return siphashGeneral(k0, k1, b0), siphashGeneral(k0, k1, b1)
-}
-func siphashPRF(v0, v1, v2, v3, b0, b1 uint64) (uint64, uint64) {
-	return siphashPRFGeneral(v0, v1, v2, v3, b0), siphashPRFGeneral(v0, v1, v2, v3, b1)
-}
-func siphashPRF16(v0, v1, v2, v3 uint64, nonce *[16]uint64, uorv uint64, result *[16]uint64) {
-	for i := range nonce {
-		b := (nonce[i] << 1) | uorv
-		result[i] = siphashPRFGeneral(v0, v1, v2, v3, b)
-	}
-}
-func siphashPRF16Seq(v0, v1, v2, v3 uint64, nonce uint64, uorv uint64, result *[16]uint64) {
-	for i := uint64(0); i < 16; i++ {
-		b := ((nonce + i) << 1) | uorv
-		result[i] = siphashPRFGeneral(v0, v1, v2, v3, b)
-	}
-}
+const (
+	edgebits  = 25
+	proofSize = 20
+	nedge     = 1 << edgebits
+	edgemask  = nedge - 1
+	nnode     = 2 * nedge
+	easiness  = nnode * 70 / 100
+	maxpath   = 8192
+	minnonce  = 40000000 //nnode * 60 / 100 //
+)

@@ -21,7 +21,10 @@
 
 package cuckoo
 
-import "testing"
+import (
+	"math/rand"
+	"testing"
+)
 
 func TestSiphash(t *testing.T) {
 	var k0 uint64 = 0x0011223344556677
@@ -58,6 +61,55 @@ func TestSiphash(t *testing.T) {
 		t.Error("incorrect resut\n")
 	}
 }
+func TestSiphash16(t *testing.T) {
+	var k0 uint64 = 0x0011223344556677
+	var k1 uint64 = 0x8899aabbccddeeff
+	v0 := k0 ^ 0x736f6d6570736575
+	v1 := k1 ^ 0x646f72616e646f6d
+	v2 := k0 ^ 0x6c7967656e657261
+	v3 := k1 ^ 0x7465646279746573
+	var nonce [16]uint64
+	for i := range nonce {
+		nonce[i] = uint64(rand.Int63())
+	}
+	var uorv uint64 = 1
+	res := make([]uint64, 16)
+	for i := range res {
+		b := (nonce[i] << 1) | uorv
+		res[i] = siphashGeneral(k0, k1, b)
+	}
+	var ts [16]uint64
+	siphashPRF16(v0, v1, v2, v3, &nonce, uorv, &ts)
+	for i := range ts {
+		if ts[i] != res[i] {
+			t.Error("invalid siphash16 at", i)
+		}
+	}
+}
+
+func TestSiphash16Seq(t *testing.T) {
+	var k0 uint64 = 0x0011223344556677
+	var k1 uint64 = 0x8899aabbccddeeff
+	v0 := k0 ^ 0x736f6d6570736575
+	v1 := k1 ^ 0x646f72616e646f6d
+	v2 := k0 ^ 0x6c7967656e657261
+	v3 := k1 ^ 0x7465646279746573
+	nonce := uint64(rand.Int63())
+	var uorv uint64 = 1
+	res := make([]uint64, 16)
+	for i := range res {
+		b := ((nonce + uint64(i)) << 1) | uorv
+		res[i] = siphashGeneral(k0, k1, b)
+	}
+	var ts [16]uint64
+	siphashPRF16Seq(v0, v1, v2, v3, nonce, uorv, &ts)
+	for i := range ts {
+		if ts[i] != res[i] {
+			t.Error("invalid siphash16 at", i)
+		}
+	}
+}
+
 func BenchmarkSiphash(b *testing.B) {
 	var k0 uint64 = 0x0011223344556677
 	var k1 uint64 = 0x8899aabbccddeeff
@@ -67,6 +119,25 @@ func BenchmarkSiphash(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = siphash(k0, k1, b0, b1)
+	}
+}
+
+func BenchmarkSiphash16(b *testing.B) {
+	var k0 uint64 = 0x0011223344556677
+	var k1 uint64 = 0x8899aabbccddeeff
+	v0 := k0 ^ 0x736f6d6570736575
+	v1 := k1 ^ 0x646f72616e646f6d
+	v2 := k0 ^ 0x6c7967656e657261
+	v3 := k1 ^ 0x7465646279746573
+	var nonce [16]uint64
+	for i := range nonce {
+		nonce[i] = uint64(rand.Int63())
+	}
+	var uorv uint64 = 1
+	b.ResetTimer()
+	var ts [16]uint64
+	for i := 0; i < b.N; i++ {
+		siphashPRF16(v0, v1, v2, v3, &nonce, uorv, &ts)
 	}
 }
 

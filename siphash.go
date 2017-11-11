@@ -1,6 +1,4 @@
-//+build !amd64
 // Copyright (c) 2017 Aidos Developer
-
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -19,23 +17,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Original license from https://github.com/dchest/siphash
+// Written in 2012 by Dmitry Chestnykh.
+//
+// To the extent possible under law, the author have dedicated all copyright
+// and related and neighboring rights to this software to the public domain
+// worldwide. This software is distributed without any warranty.
+// http://creativecommons.org/publicdomain/zero/1.0/
+
 package cuckoo
 
-func siphash(k0, k1, b0, b1 uint64) (uint64, uint64) {
-	return siphashGeneral(k0, k1, b0), siphashGeneral(k0, k1, b1)
+import "encoding/binary"
+
+type sip struct {
+	k0 uint64
+	k1 uint64
+	v0 uint64
+	v1 uint64
+	v2 uint64
+	v3 uint64
 }
-func siphashPRF(v0, v1, v2, v3, b0, b1 uint64) (uint64, uint64) {
-	return siphashPRFGeneral(v0, v1, v2, v3, b0), siphashPRFGeneral(v0, v1, v2, v3, b1)
-}
-func siphashPRF16(v0, v1, v2, v3 uint64, nonce *[16]uint64, uorv uint64, result *[16]uint64) {
-	for i := range nonce {
-		b := (nonce[i] << 1) | uorv
-		result[i] = siphashPRFGeneral(v0, v1, v2, v3, b)
+
+func newsip(h []byte) *sip {
+	s := &sip{
+		k0: binary.LittleEndian.Uint64(h[:]),
+		k1: binary.LittleEndian.Uint64(h[8:]),
 	}
-}
-func siphashPRF16Seq(v0, v1, v2, v3 uint64, nonce uint64, uorv uint64, result *[16]uint64) {
-	for i := uint64(0); i < 16; i++ {
-		b := ((nonce + i) << 1) | uorv
-		result[i] = siphashPRFGeneral(v0, v1, v2, v3, b)
-	}
+	s.v0 = s.k0 ^ 0x736f6d6570736575
+	s.v1 = s.k1 ^ 0x646f72616e646f6d
+	s.v2 = s.k0 ^ 0x6c7967656e657261
+	s.v3 = s.k1 ^ 0x7465646279746573
+	return s
 }
