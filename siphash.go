@@ -32,10 +32,7 @@ import "encoding/binary"
 type sip struct {
 	k0 uint64
 	k1 uint64
-	v0 uint64
-	v1 uint64
-	v2 uint64
-	v3 uint64
+	v  [4]uint64
 }
 
 func newsip(h []byte) *sip {
@@ -43,9 +40,9 @@ func newsip(h []byte) *sip {
 		k0: binary.LittleEndian.Uint64(h[:]),
 		k1: binary.LittleEndian.Uint64(h[8:]),
 	}
-	s.v0 = s.k0 ^ 0x736f6d6570736575
-	s.v1 = s.k1 ^ 0x646f72616e646f6d
-	s.v2 = s.k0 ^ 0x6c7967656e657261
-	s.v3 = s.k1 ^ 0x7465646279746573
+	s.v[0] = s.k0 ^ 0x736f6d6570736575
+	s.v[1] = s.k1 ^ 0x646f72616e646f6d
+	s.v[2] = s.k0 ^ 0x6c7967656e657261
+	s.v[3] = s.k1 ^ 0x7465646279746573
 	return s
 }

@@ -48,22 +48,17 @@ DATA init1<>+0x08(SB)/8, $0x7465646279746573
 GLOBL init0<>(SB), (NOPTR+RODATA), $16
 GLOBL init1<>(SB), (NOPTR+RODATA), $16
 
-
-
 #define ADD(a,b)\
 	PADDQ	b, a
 
 #define XOR(a, b)\
 	PXOR	b, a
 
-
 #define ROT(x,n) \
 	MOVOA	x, X4 \
 	PSLLQ	$n, X4 \ 
 	PSRLQ	$(64-n), x \
 	POR	X4, x 
-
-
 
 #define ROT16(x) \
 	PSHUFB	X7, x
@@ -103,53 +98,6 @@ GLOBL init1<>(SB), (NOPTR+RODATA), $16
 	XOR(X2, X3) \
 	XOR(X0, X2)
 
-// func siphash(k0, k1,b0,b1 uint64) (uint64,uint64)
-TEXT ·siphash(SB), NOSPLIT, $0
-	MOVOU	k0+0(FP), X0
-	MOVOA	X0, X2
-	PXOR	init0<>(SB), X0
-	PXOR	init1<>(SB), X2
-	MOVOA	X0, X1
-	MOVHLPS	X1, X1              
-	MOVLHPS	X0, X0
-	MOVOA	X2, X3
-	MOVHLPS	X3, X3              
-	MOVLHPS	X2, X2
-	MOVOA	rotate16<>(SB),X7
-    MOVOU   b0+16(FP), X6
-	MOVQ	$0xff, AX
-	MOVQ	AX, X5
-	MOVLHPS	X5, X5
-
-	SIP1
-	MOVOU	X0, ret+32(FP)
-	RET
-
-
-
-// func siphashPRF(v0, v1,v2,v3,b0,b1 uint64) (uint64,uint64)
-TEXT ·siphashPRF(SB), NOSPLIT, $0
-	MOVLPD	v0+0(FP), X0
-	MOVLPD	v1+8(FP), X1 
-	MOVLPD	v2+16(FP), X2
-	MOVLPD	v3+24(FP), X3
-	MOVLHPS	X0, X0
-	MOVLHPS	X1, X1
-	MOVLHPS	X2, X2
-	MOVLHPS	X3, X3
-	MOVOA	rotate16<>(SB),X7
-    MOVOU   b0+32(FP), X6
-	MOVQ	$0xff, AX
-	MOVQ	AX, X5
-	MOVLHPS	X5, X5
-
-	MOVLHPS	X5, X5
-
-	SIP1
-	MOVOU	X0, ret+48(FP)
-	RET
-
-
 #define NSIP \
 	MOVOU	(CX),X6 \
 	PSLLQ	$1, X6 \
@@ -163,20 +111,24 @@ TEXT ·siphashPRF(SB), NOSPLIT, $0
 	MOVOU X0, (BX) \
 	ADDQ $16, BX
 
-//func siphashPRF16(v0, v1, v2, v3 uint64, nonce *[16]uint64, uorv uint64, result *[16]uint64)
+//func siphashPRF16(v *[4]uint64, nonce *[16]uint64, uorv uint64, result *[16]uint64)
 TEXT ·siphashPRF16(SB), NOSPLIT, $0
 	MOVQ	$0xff, AX
 	MOVQ	AX, X5
 	MOVLHPS	X5, X5
 	MOVOA	rotate16<>(SB),X7
 
-	MOVQ	v0+0(FP), X8
-	MOVQ	v1+8(FP), X9
-	MOVQ	v2+16(FP), X10
-	MOVQ	v3+24(FP), X11
-    MOVQ	nonce+32(FP), CX
-	MOVQ	uorv+40(FP), X12
-	MOVQ	result+48(FP), BX
+	MOVQ	v+0(FP), CX
+	MOVQ	(CX), X8
+	ADDQ	$8, CX
+	MOVQ	(CX), X9
+	ADDQ	$8, CX
+	MOVQ	(CX), X10
+	ADDQ	$8, CX
+	MOVQ	(CX), X11
+    MOVQ	nonce+8(FP), CX
+	MOVQ	uorv+16(FP), X12
+	MOVQ	result+24(FP), BX
 	MOVLHPS	X8, X8
 	MOVLHPS	X9, X9 
 	MOVLHPS	X10, X10 
@@ -207,20 +159,24 @@ TEXT ·siphashPRF16(SB), NOSPLIT, $0
 	PADDQ	X4, X6 \
 
 
-//func siphashPRF16Seq(v0, v1, v2, v3 uint64, nonce uint64, uorv uint64, result *[16]uint64)
+//func siphashPRF16Seq(v *[4]uint64, nonce uint64, uorv uint64, result *[16]uint64)
 TEXT ·siphashPRF16Seq(SB), NOSPLIT, $0
 	MOVQ	$0xff, AX
 	MOVQ	AX, X5
 	MOVLHPS	X5, X5
 	MOVOA	rotate16<>(SB),X7
 
-	MOVQ	v0+0(FP), X8
-	MOVQ	v1+8(FP), X9
-	MOVQ	v2+16(FP), X10
-	MOVQ	v3+24(FP), X11
-    MOVQ	nonce+32(FP), X6
-	MOVQ	uorv+40(FP), X12
-	MOVQ	result+48(FP), BX
+	MOVQ	v+0(FP), CX
+	MOVQ	(CX), X8
+	ADDQ	$8, CX
+	MOVQ	(CX), X9
+	ADDQ	$8, CX
+	MOVQ	(CX), X10
+	ADDQ	$8, CX
+	MOVQ	(CX), X11
+    MOVQ	nonce+8(FP), X6
+	MOVQ	uorv+16(FP), X12
+	MOVQ	result+24(FP), BX
 	MOVLHPS	X8, X8
 	MOVLHPS	X9, X9 
 	MOVLHPS	X10, X10 

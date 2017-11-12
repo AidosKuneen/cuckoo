@@ -1,17 +1,18 @@
 package cuckoo
 
-type cuckoo struct {
+//Cuckoo is   struct for cuckoo miner.
+type Cuckoo struct {
 	cuckoo [nnode + 1]uint32
 	sip    *sip
 }
 
-func newCuckoo(header []byte) *cuckoo {
-	return &cuckoo{
-		sip: newsip(header),
+func newCuckoo(sipkey []byte) *Cuckoo {
+	return &Cuckoo{
+		sip: newsip(sipkey),
 	}
 }
 
-func (c *cuckoo) path(u uint32, us *[maxpath]uint32) (int, bool) {
+func (c *Cuckoo) path(u uint32, us *[maxpath]uint32) (int, bool) {
 	nu := 0
 	for ; u != 0; nu++ {
 		if nu >= maxpath {
@@ -33,7 +34,7 @@ func (s set) exist(u, v uint32) bool {
 	return exist
 }
 
-func (c *cuckoo) solution(us *[maxpath]uint32, sizeU int, vs *[maxpath]uint32, sizeV int) (*[proofSize]uint32, bool) {
+func (c *Cuckoo) solution(us *[maxpath]uint32, sizeU int, vs *[maxpath]uint32, sizeV int) (*[proofSize]uint32, bool) {
 	nu := int32(sizeU - 1)
 	nv := int32(sizeV - 1)
 	min := nu
@@ -64,8 +65,8 @@ func (c *cuckoo) solution(us *[maxpath]uint32, sizeU int, vs *[maxpath]uint32, s
 	var nodesV [16]uint64
 	idx := 0
 	for nonce := uint64(0); nonce < easiness; nonce += 16 {
-		siphashPRF16Seq(c.sip.v0, c.sip.v1, c.sip.v2, c.sip.v3, nonce, 0, &nodesU)
-		siphashPRF16Seq(c.sip.v0, c.sip.v1, c.sip.v2, c.sip.v3, nonce, 1, &nodesV)
+		siphashPRF16Seq(&c.sip.v, nonce, 0, &nodesU)
+		siphashPRF16Seq(&c.sip.v, nonce, 1, &nodesV)
 		for i := uint64(0); i < 16; i++ {
 			u0 := uint32(nodesU[i]&edgemask) << 1
 			v0 := uint32((nodesV[i]&edgemask)<<1) | 1
@@ -78,13 +79,15 @@ func (c *cuckoo) solution(us *[maxpath]uint32, sizeU int, vs *[maxpath]uint32, s
 	return &answer, true
 }
 
-func (c *cuckoo) worker() (*[proofSize]uint32, bool) {
+//Mine mines with sipkey for siphash.
+func Mine(sipkey []byte) (*[proofSize]uint32, bool) {
 	var nodesU, nodesV [16]uint64
 	var us, vs [maxpath]uint32
+	c := newCuckoo(sipkey)
 
 	for nonce := uint64(0); nonce < easiness; nonce += 16 {
-		siphashPRF16Seq(c.sip.v0, c.sip.v1, c.sip.v2, c.sip.v3, nonce, 0, &nodesU)
-		siphashPRF16Seq(c.sip.v0, c.sip.v1, c.sip.v2, c.sip.v3, nonce, 1, &nodesV)
+		siphashPRF16Seq(&c.sip.v, nonce, 0, &nodesU)
+		siphashPRF16Seq(&c.sip.v, nonce, 1, &nodesV)
 		for i := range nodesU {
 			u0 := uint32(nodesU[i]&edgemask) << 1
 			if u0 == 0 {

@@ -27,16 +27,21 @@
 
 package cuckoo
 
-func siphashGeneral(k0, k1, b uint64) uint64 {
+func siphash(k0, k1, b uint64) uint64 {
 	// Initialization.
-	v0 := k0 ^ 0x736f6d6570736575
-	v1 := k1 ^ 0x646f72616e646f6d
-	v2 := k0 ^ 0x6c7967656e657261
-	v3 := k1 ^ 0x7465646279746573
-	return siphashPRFGeneral(v0, v1, v2, v3, b)
+	var v [4]uint64
+	v[0] = k0 ^ 0x736f6d6570736575
+	v[1] = k1 ^ 0x646f72616e646f6d
+	v[2] = k0 ^ 0x6c7967656e657261
+	v[3] = k1 ^ 0x7465646279746573
+	return siphashPRF(&v, b)
 }
 
-func siphashPRFGeneral(v0, v1, v2, v3, b uint64) uint64 {
+func siphashPRF(v *[4]uint64, b uint64) uint64 {
+	v0 := v[0]
+	v1 := v[1]
+	v2 := v[2]
+	v3 := v[3]
 	// Initialization.
 	// Compression.
 	v3 ^= b

@@ -21,12 +21,6 @@
 
 package cuckoo
 
-func siphash(k0, k1, b0, b1 uint64) (uint64, uint64) {
-	return siphashGeneral(k0, k1, b0), siphashGeneral(k0, k1, b1)
-}
-func siphashPRF(v0, v1, v2, v3, b0, b1 uint64) (uint64, uint64) {
-	return siphashPRFGeneral(v0, v1, v2, v3, b0), siphashPRFGeneral(v0, v1, v2, v3, b1)
-}
 func siphashPRF16(v0, v1, v2, v3 uint64, nonce *[16]uint64, uorv uint64, result *[16]uint64) {
 	for i := range nonce {
 		b := (nonce[i] << 1) | uorv
