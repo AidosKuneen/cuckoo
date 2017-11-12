@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	edgebits = 25
+	edgebits = 24
 	//ProofSize is the number of nonces and cycles
 	ProofSize = 20
 	nedge     = 1 << edgebits
@@ -32,11 +32,11 @@ const (
 	nnode     = 2 * nedge
 	easiness  = nnode //* 70 / 100
 	maxpath   = 8192
-	minnonce  = nnode * 60 / 100
+	minnonce  = nnode * 70 / 100
 )
 
 //Verify verifiex cockoo nonces.
-func Verify(nonces *[ProofSize]uint32, sipkey []byte) error {
+func Verify(sipkey []byte, nonces *[ProofSize]uint32) error {
 	sip := newsip(sipkey)
 	var uvs [2 * ProofSize]uint32
 	var xor0, xor1 uint32

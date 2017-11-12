@@ -79,11 +79,11 @@ func (c *Cuckoo) solution(us *[maxpath]uint32, sizeU int, vs *[maxpath]uint32, s
 	return &answer, true
 }
 
-//PoW does PoW with sipkey for siphash.
-func PoW(sipkey []byte) (*[ProofSize]uint32, bool) {
+//PoW does PoW with hash, which is the key for siphash.
+func PoW(hash []byte, checker func(*[ProofSize]uint32) bool) (*[ProofSize]uint32, bool) {
 	var nodesU, nodesV [16]uint64
 	var us, vs [maxpath]uint32
-	c := newCuckoo(sipkey)
+	c := newCuckoo(hash)
 
 	for nonce := uint64(0); nonce < easiness; nonce += 16 {
 		siphashPRF16Seq(&c.sip.v, nonce, 0, &nodesU)
@@ -104,7 +104,9 @@ func PoW(sipkey []byte) (*[ProofSize]uint32, bool) {
 			if us[sizeU-1] == vs[sizeV-1] {
 				if nonce+uint64(i) >= minnonce {
 					if ans, ok := c.solution(&us, sizeU, &vs, sizeV); ok {
-						return ans, true
+						if checker(ans) {
+							return ans, true
+						}
 					}
 				}
 				continue
