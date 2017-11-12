@@ -13,9 +13,8 @@ mentiond in [this paper](https://github.com/tromp/cuckoo/blob/master/doc/cuckoo.
 
 In short, 
 
-```
-Cuckoo Cycle is the first graph-theoretic proof-of-work, and the most memory bound, yet with instant verification.
-```
+"Cuckoo Cycle is the first graph-theoretic proof-of-work, and the most memory bound, yet with instant verification"
+
 
 to prevent ASICs to get half of hash power easier in network, without heavy work for proover.
 
@@ -43,13 +42,13 @@ are required to compile.
 
 ```go
 	import "github.com/AidosKuneen/cuckoo"
-	var hash []byte //should be 32 bytes
+	hash :=[]byte{"some data, which should be 32 bytes"}
 	nonces, found := cuckoo.PoW(hash)
 	if !found{
 		//retry with another hash
 	}
 
-	if !cuckoo.Verify(hash,nonces){
+	if !cuckoo.Verify(hash, nonces){
 		//failed to verify
 	}
 ```
