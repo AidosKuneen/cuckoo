@@ -44,7 +44,10 @@ are required to compile.
 ```go
 	import "github.com/AidosKuneen/cuckoo"
 	hash :=[]byte{"some data, which should be 32 bytes"}
-	nonces, found := cuckoo.PoW(hash)
+	nonces, found := cuckoo.PoW(hash, func(nonces *[ProofSize]uint32) bool {
+		//additional PoW (e.g. hash-based PoW) with nonces
+		return true //or return false
+	}))
 	if !found{
 		//retry with another hash
 	}
