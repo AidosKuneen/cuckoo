@@ -36,7 +36,7 @@ const (
 )
 
 //Verify verifiex cockoo nonces.
-func Verify(nonces [ProofSize]uint32, sipkey []byte) error {
+func Verify(nonces *[ProofSize]uint32, sipkey []byte) error {
 	sip := newsip(sipkey)
 	var uvs [2 * ProofSize]uint32
 	var xor0, xor1 uint32
@@ -69,7 +69,7 @@ func Verify(nonces [ProofSize]uint32, sipkey []byte) error {
 	}
 
 	n := 0
-	for i := 0; ; n++ {
+	for i := 0; ; {
 		another := i
 		for k := (i + 2) % (2 * ProofSize); k != i; k = (k + 2) % (2 * ProofSize) {
 			if uvs[k] == uvs[i] {
@@ -83,6 +83,7 @@ func Verify(nonces [ProofSize]uint32, sipkey []byte) error {
 			return errors.New("dead end in nonce")
 		}
 		i = another ^ 1
+		n++
 		if i == 0 {
 			break
 		}

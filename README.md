@@ -8,7 +8,7 @@ Cuckoo Cycle
 
 ## Overview
 
-This library is [Cockoo Cycle](https://github.com/tromp/cuckoo) in Go 
+This library is [Cockoo Cycle](https://github.com/tromp/cuckoo) implementation in Go 
 mentiond in [this paper](https://github.com/tromp/cuckoo/blob/master/doc/cuckoo.pdf).
 
 In short, 
@@ -25,6 +25,7 @@ This library uses below parameters.
 * easiness = 100% to prevent optimizations e.g. by edge trimming.
 * largest nonce must be over #nodes * 0.7 to prevent earlier solution.
 
+Note that the PoW should be finished in around 10 minutes.
 
 ## Requirements
 
@@ -48,7 +49,7 @@ are required to compile.
 		//retry with another hash
 	}
 
-	if !cuckoo.Verify(hash, nonces){
+	if !cuckoo.Verify(nonces, hash){
 		//failed to verify
 	}
 ```
