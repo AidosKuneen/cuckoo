@@ -53,7 +53,7 @@ func TestCuckoo(t *testing.T) {
 	b := make([]byte, 16)
 	binary.LittleEndian.PutUint64(b, k0)
 	binary.LittleEndian.PutUint64(b[8:], k1)
-	ans, found := Mine(b)
+	ans, found := PoW(b)
 	if !found {
 		t.Fatalf("should be found")
 	}
@@ -67,7 +67,7 @@ func TestCuckoo(t *testing.T) {
 func TestVerify(t *testing.T) {
 	var k0 uint64 = 0xa34c6a2bdaa03a14
 	var k1 uint64 = 0xd736650ae53eee9e
-	no := [proofSize]uint32{
+	no := [ProofSize]uint32{
 		0x8a955, 0x18d131, 0x472402, 0x576611, 0x81c8b8, 0xbdbc08, 0xc619c6,
 		0xdb35b1, 0xe2de6a, 0x12b177c, 0x132b902, 0x138e3d8, 0x14cb161,
 		0x17a5eb3, 0x18eb464, 0x1b75a82, 0x215eb16, 0x23813d4, 0x2849c1a, 0x2a426d3,
@@ -91,7 +91,7 @@ func TestCuckoo2(t *testing.T) {
 	b := make([]byte, 16)
 	binary.LittleEndian.PutUint64(b, k0)
 	binary.LittleEndian.PutUint64(b[8:], k1)
-	ans, found := Mine(b)
+	ans, found := PoW(b)
 	if !found {
 		t.Fatalf("should be found")
 	}

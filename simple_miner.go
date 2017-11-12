@@ -34,7 +34,7 @@ func (s set) exist(u, v uint32) bool {
 	return exist
 }
 
-func (c *Cuckoo) solution(us *[maxpath]uint32, sizeU int, vs *[maxpath]uint32, sizeV int) (*[proofSize]uint32, bool) {
+func (c *Cuckoo) solution(us *[maxpath]uint32, sizeU int, vs *[maxpath]uint32, sizeV int) (*[ProofSize]uint32, bool) {
 	nu := int32(sizeU - 1)
 	nv := int32(sizeV - 1)
 	min := nu
@@ -48,7 +48,7 @@ func (c *Cuckoo) solution(us *[maxpath]uint32, sizeU int, vs *[maxpath]uint32, s
 		nv++
 	}
 	l := nu + nv + 1
-	if l != proofSize {
+	if l != ProofSize {
 		return nil, false
 	}
 
@@ -60,7 +60,7 @@ func (c *Cuckoo) solution(us *[maxpath]uint32, sizeU int, vs *[maxpath]uint32, s
 	for nv--; nv >= 0; nv-- {
 		cycle.add(vs[nv|1], vs[(nv+1)&0x1ffffffe])
 	}
-	var answer [proofSize]uint32
+	var answer [ProofSize]uint32
 	var nodesU [16]uint64
 	var nodesV [16]uint64
 	idx := 0
@@ -79,8 +79,8 @@ func (c *Cuckoo) solution(us *[maxpath]uint32, sizeU int, vs *[maxpath]uint32, s
 	return &answer, true
 }
 
-//Mine mines with sipkey for siphash.
-func Mine(sipkey []byte) (*[proofSize]uint32, bool) {
+//PoW does PoW with sipkey for siphash.
+func PoW(sipkey []byte) (*[ProofSize]uint32, bool) {
 	var nodesU, nodesV [16]uint64
 	var us, vs [maxpath]uint32
 	c := newCuckoo(sipkey)

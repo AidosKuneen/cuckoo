@@ -17,24 +17,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Original license from https://github.com/dchest/siphash
-// Written in 2012 by Dmitry Chestnykh.
-//
-// To the extent possible under law, the author have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
-// http://creativecommons.org/publicdomain/zero/1.0/
-
 package cuckoo
 
 import (
 	"errors"
-	"log"
 )
 
 const (
-	edgebits  = 25
-	proofSize = 20
+	edgebits = 25
+	//ProofSize is the number of nonces and cycles
+	ProofSize = 20
 	nedge     = 1 << edgebits
 	edgemask  = nedge - 1
 	nnode     = 2 * nedge
@@ -44,19 +36,19 @@ const (
 )
 
 //Verify verifiex cockoo nonces.
-func Verify(nonces [proofSize]uint32, sipkey []byte) error {
+func Verify(nonces [ProofSize]uint32, sipkey []byte) error {
 	sip := newsip(sipkey)
-	var uvs [2 * proofSize]uint32
+	var uvs [2 * ProofSize]uint32
 	var xor0, xor1 uint32
 
-	if nonces[proofSize-1] > easiness {
+	if nonces[ProofSize-1] > easiness {
 		return errors.New("nonce is too big")
 	}
-	if nonces[proofSize-1] < minnonce {
+	if nonces[ProofSize-1] < minnonce {
 		return errors.New("last nonce is too small")
 	}
 
-	for n := 0; n < proofSize; n++ {
+	for n := 0; n < ProofSize; n++ {
 		if n > 0 && nonces[n] <= nonces[n-1] {
 			return errors.New("nonces are not in order")
 		}
@@ -76,15 +68,10 @@ func Verify(nonces [proofSize]uint32, sipkey []byte) error {
 		return errors.New("V endpoinsts don't match")
 	}
 
-	for i := range uvs {
-		log.Println(uvs[i])
-	}
-
 	n := 0
-	var i uint32
-	for {
+	for i := 0; ; n++ {
 		another := i
-		for k := (i + 2) % (2 * proofSize); k != i; k = (k + 2) % (2 * proofSize) {
+		for k := (i + 2) % (2 * ProofSize); k != i; k = (k + 2) % (2 * ProofSize) {
 			if uvs[k] == uvs[i] {
 				if another != i {
 					return errors.New("there are branches in nonce")
@@ -93,16 +80,14 @@ func Verify(nonces [proofSize]uint32, sipkey []byte) error {
 			}
 		}
 		if another == i {
-			log.Println(i, uvs[i])
 			return errors.New("dead end in nonce")
 		}
 		i = another ^ 1
-		n++
 		if i == 0 {
 			break
 		}
 	}
-	if n != proofSize {
+	if n != ProofSize {
 		return errors.New("cycle is too short")
 	}
 	return nil
