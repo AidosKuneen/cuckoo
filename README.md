@@ -23,7 +23,6 @@ This library uses below parameters.
 * cycle = 20 to minimize the size impact to transactions.
 * bits of nodes (log2(#nodes)) = 25, memory usage should be around 128MB.
 * easiness = 100% to prevent optimizations e.g. by edge trimming.
-* largest nonce must be over #nodes * 0.7 to prevent earlier solution.
 
 PoW should be finished in around 100 seconds, so hash based PoW should be done additionally.
 

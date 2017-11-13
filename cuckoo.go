@@ -32,7 +32,7 @@ const (
 	nnode     = 2 * nedge
 	easiness  = nnode //* 70 / 100
 	maxpath   = 8192
-	minnonce  = nnode * 70 / 100
+	minnonce  = 0
 )
 
 //Verify verifiex cockoo nonces.
