@@ -21,15 +21,15 @@
 
 package cuckoo
 
-func siphashPRF16(v0, v1, v2, v3 uint64, nonce *[16]uint64, uorv uint64, result *[16]uint64) {
+func siphashPRF16(v *[4]uint64, nonce *[16]uint64, uorv uint64, result *[16]uint64) {
 	for i := range nonce {
 		b := (nonce[i] << 1) | uorv
-		result[i] = siphashPRFGeneral(v0, v1, v2, v3, b)
+		result[i] = siphashPRF(v, b)
 	}
 }
-func siphashPRF16Seq(v0, v1, v2, v3 uint64, nonce uint64, uorv uint64, result *[16]uint64) {
+func siphashPRF16Seq(v *[4]uint64, nonce uint64, uorv uint64, result *[16]uint64) {
 	for i := uint64(0); i < 16; i++ {
 		b := ((nonce + i) << 1) | uorv
-		result[i] = siphashPRFGeneral(v0, v1, v2, v3, b)
+		result[i] = siphashPRF(v, b)
 	}
 }
