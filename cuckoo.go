@@ -32,7 +32,6 @@ const (
 	nnode     = 2 * nedge
 	easiness  = nnode * 50 / 100
 	maxpath   = 8192
-	minnonce  = 0
 )
 
 //Verify verifiex cockoo nonces.
@@ -43,9 +42,6 @@ func Verify(sipkey []byte, nonces *[ProofSize]uint32) error {
 
 	if nonces[ProofSize-1] > easiness {
 		return errors.New("nonce is too big")
-	}
-	if nonces[ProofSize-1] < minnonce {
-		return errors.New("last nonce is too small")
 	}
 
 	for n := 0; n < ProofSize; n++ {
