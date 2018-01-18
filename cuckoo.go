@@ -30,7 +30,7 @@ const (
 	nedge     = 1 << edgebits
 	edgemask  = nedge - 1
 	nnode     = 2 * nedge
-	easiness  = nnode //* 70 / 100
+	easiness  = nnode * 50 / 100
 	maxpath   = 8192
 	minnonce  = 0
 )
