@@ -325,8 +325,7 @@ func (c *Cuckoo) trimrename0(isU bool) int {
 
 func (c *Cuckoo) trim2(isU bool) int {
 	num := 0
-	var m2 bucket
-	m2 = make([]uint64, 0, bigeps)
+	m2 := make([]uint64, 0, bigeps)
 	for ux := uint32(0); ux < nx; ux++ {
 		var cnt [1 << (xbits + comp0bits)]byte
 		c.index(isU, ux)
@@ -406,7 +405,7 @@ func (c *Cuckoo) trimrename1(isU bool) int {
 }
 
 func (c *Cuckoo) trimmimng() {
-	i := 0
+	var i int
 	c.buildU()
 	c.buildV()
 	_, maxv := c.trim(false)
