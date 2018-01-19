@@ -35,10 +35,14 @@ const (
 )
 
 //Verify verifiex cockoo nonces.
-func Verify(sipkey []byte, nonces *[ProofSize]uint32) error {
+func Verify(sipkey []byte, nonces []uint32) error {
 	sip := newsip(sipkey)
 	var uvs [2 * ProofSize]uint32
 	var xor0, xor1 uint32
+
+	if len(nonces) != ProofSize {
+		return errors.New("length of nonce is not correct")
+	}
 
 	if nonces[ProofSize-1] > easiness {
 		return errors.New("nonce is too big")

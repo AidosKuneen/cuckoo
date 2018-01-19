@@ -34,10 +34,10 @@ type Cuckoo struct {
 	m2      [nx]bucket
 }
 
-func newCuckoo(sipkey []byte) *Cuckoo {
+//NewCuckoo reeturns Cuckoo struct to do PoW.
+func NewCuckoo() *Cuckoo {
 	c := &Cuckoo{
 		cuckoo: make([]uint32, 1<<17+1),
-		sip:    newsip(sipkey),
 	}
 	for x := 0; x < nx; x++ {
 		c.m2[x] = make([]uint64, 0, bigeps)
@@ -105,7 +105,7 @@ func (e *edges) find(uv uint64, min, max int) bool {
 	}
 	return true
 }
-func (c *Cuckoo) solution(us []uint32, vs []uint32) (*[ProofSize]uint32, bool) {
+func (c *Cuckoo) solution(us []uint32, vs []uint32) ([]uint32, bool) {
 	nu := int32(len(us) - 1)
 	nv := int32(len(vs) - 1)
 	min := nu
@@ -134,23 +134,21 @@ func (c *Cuckoo) solution(us []uint32, vs []uint32) (*[ProofSize]uint32, bool) {
 	sort.Slice(es.edge, func(i, j int) bool {
 		return es.edge[i] < es.edge[j]
 	})
-	var answer [ProofSize]uint32
-	idx := 0
+	answer := make([]uint32, 0, ProofSize)
 	var nodesU [16]uint64
-	for nonce := uint64(0); nonce < easiness && idx < ProofSize; nonce += 16 {
+	for nonce := uint64(0); nonce < easiness && len(answer) < ProofSize; nonce += 16 {
 		siphashPRF16Seq(&c.sip.v, nonce, 0, &nodesU)
 		for i := uint64(0); i < 16; i++ {
 			u0 := nodesU[i] & edgemask
 			if es.uxymap[(u0>>zbits)&xymask] {
 				v0 := siphashPRF(&c.sip.v, ((nonce+i)<<1)|1) & edgemask
 				if es.find((u0<<32)|v0, 0, len(es.edge)-1) {
-					answer[idx] = uint32(nonce + i)
-					idx++
+					answer = append(answer, uint32(nonce+i))
 				}
 			}
 		}
 	}
-	return &answer, true
+	return answer, true
 }
 
 func (c *Cuckoo) index(isU bool, x uint32) {
@@ -425,8 +423,18 @@ func (c *Cuckoo) trimmimng() {
 }
 
 //PoW does PoW with hash, which is the key for siphash.
-func PoW(hash []byte, checker func(*[ProofSize]uint32) bool) (*[ProofSize]uint32, bool) {
-	c := newCuckoo(hash)
+func (c *Cuckoo) PoW(sipkey []byte) ([]uint32, bool) {
+	for x := 0; x < nx; x++ {
+		c.m2[x] = c.m2[x][:0]
+		for y := 0; y < nx; y++ {
+			c.matrix[x][y] = c.matrix[x][y][:0]
+		}
+	}
+	for i := range c.cuckoo {
+		c.cuckoo[i] = 0
+	}
+
+	c.sip = newsip(sipkey)
 	c.trimmimng()
 
 	for _, ux := range c.matrix {
@@ -441,9 +449,7 @@ func PoW(hash []byte, checker func(*[ProofSize]uint32) bool) (*[ProofSize]uint32
 				}
 				if us[len(us)-1] == vs[len(vs)-1] {
 					if ans, ok := c.solution(us, vs); ok {
-						if checker(ans) {
-							return ans, true
-						}
+						return ans, true
 					}
 					continue
 				}

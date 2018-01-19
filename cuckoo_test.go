@@ -69,9 +69,8 @@ func TestCuckoo(t *testing.T) {
 	b := make([]byte, 16)
 	binary.LittleEndian.PutUint64(b, k0)
 	binary.LittleEndian.PutUint64(b[8:], k1)
-	ans, found := PoW(b, func(nonces *[ProofSize]uint32) bool {
-		return true
-	})
+	c := NewCuckoo()
+	ans, found := c.PoW(b)
 	if !found {
 		t.Fatalf("should be found")
 	}
@@ -80,21 +79,7 @@ func TestCuckoo(t *testing.T) {
 			t.Error("nonce is incorrect")
 		}
 	}
-}
-
-func TestVerify(t *testing.T) {
-	var k0 uint64 = 0xf4956dc403730b01
-	var k1 uint64 = 0xe6d45de39c2a5a3e
-	no := [ProofSize]uint32{
-		0x6d31e, 0x72b0e, 0x7aaaf, 0x134522, 0x18cdb9,
-		0x1ffaef, 0x28b919, 0x43d8fa, 0x7fc4fb, 0x968240,
-		0xa28796, 0xad8119, 0xb6b419, 0xbbddd6, 0xbd2765,
-		0xcb572a, 0xe090d9, 0xeea5a5, 0xf2898f, 0xfa27c0,
-	}
-	b := make([]byte, 16)
-	binary.LittleEndian.PutUint64(b, k0)
-	binary.LittleEndian.PutUint64(b[8:], k1)
-	if err := Verify(b, &no); err != nil {
+	if err := Verify(b, ans); err != nil {
 		t.Error("should be legit, but", err)
 	}
 }
@@ -102,21 +87,21 @@ func TestVerify(t *testing.T) {
 func TestCuckoo2(t *testing.T) {
 	b := make([]byte, 16)
 	var found bool
-	var ans *[ProofSize]uint32
+	var ans []uint32
 	i := 0
+	c := NewCuckoo()
 	for ; !found && i < 1000; i++ {
 		if _, err := rand.Read(b); err != nil {
 			t.Fatal(err)
 		}
-		ans, found = PoW(b, func(nonces *[ProofSize]uint32) bool {
-			return true
-		})
+		ans, found = c.PoW(b)
 	}
 	t.Log(i)
 	if !found {
 		t.Fatalf("should be found")
 	}
 	if err := Verify(b, ans); err != nil {
-		t.Fatal("nonces are not correct", err)
+		t.Log(ans)
+		t.Fatal(err)
 	}
 }
