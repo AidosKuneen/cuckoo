@@ -26,6 +26,8 @@ import (
 	"errors"
 	"sort"
 	"sync"
+
+	"github.com/AidosKuneen/numcpu"
 )
 
 type bucket []uint64
@@ -49,20 +51,26 @@ const (
 
 //Cuckoo is   struct for cuckoo miner.
 type Cuckoo struct {
-	cuckoo  []uint32
-	sip     *sip
-	indexer [nx]*bucket
-	matrix  [nx][nx]bucket
-	m2      [nx]bucket
+	cuckoo []uint32
+	sip    *sip
+	matrix [nx][nx]bucket
+	ncpu   int
+	m2     [][nx]bucket
 }
 
 //NewCuckoo reeturns Cuckoo struct to do PoW.
 func NewCuckoo() *Cuckoo {
 	c := &Cuckoo{
 		cuckoo: make([]uint32, 1<<17+1),
+		ncpu:   numcpu.NumCPU(),
+	}
+	c.m2 = make([][nx]bucket, c.ncpu)
+	for i := 0; i < c.ncpu; i++ {
+		for x := 0; x < nx; x++ {
+			c.m2[i][x] = make(bucket, 0, bigeps)
+		}
 	}
 	for x := 0; x < nx; x++ {
-		c.m2[x] = make([]uint64, 0, bigeps)
 		for y := 0; y < nx; y++ {
 			c.matrix[x][y] = make([]uint64, 0, bigeps)
 		}
@@ -157,152 +165,225 @@ func (c *Cuckoo) solution(us []uint32, vs []uint32) ([]uint32, bool) {
 		return es.edge[i] < es.edge[j]
 	})
 	answer := make([]uint32, 0, ProofSize)
-	var nodesU [16]uint64
-	for nonce := uint64(0); nonce < easiness && len(answer) < ProofSize; nonce += 16 {
-		siphashPRF16Seq(&c.sip.v, nonce, 0, &nodesU)
-		for i := uint64(0); i < 16; i++ {
-			u0 := nodesU[i] & edgemask
-			if es.uxymap[(u0>>zbits)&xymask] {
-				v0 := siphashPRF(&c.sip.v, ((nonce+i)<<1)|1) & edgemask
-				if es.find((u0<<32)|v0, 0, len(es.edge)-1) {
-					answer = append(answer, uint32(nonce+i))
+	steps := easiness / c.ncpu
+	var wg sync.WaitGroup
+	var mutex sync.Mutex
+	for j := 0; j < c.ncpu; j++ {
+		wg.Add(1)
+		go func(j int) {
+			var nodesU [16]uint64
+			for nonce := uint64(steps * j); nonce < uint64(steps*(j+1)) && len(answer) < ProofSize; nonce += 16 {
+				siphashPRF16Seq(&c.sip.v, nonce, 0, &nodesU)
+				for i := uint64(0); i < 16; i++ {
+					u0 := nodesU[i] & edgemask
+					if es.uxymap[(u0>>zbits)&xymask] {
+						v0 := siphashPRF(&c.sip.v, ((nonce+i)<<1)|1) & edgemask
+						if es.find((u0<<32)|v0, 0, len(es.edge)-1) {
+							mutex.Lock()
+							answer = append(answer, uint32(nonce+i))
+							mutex.Unlock()
+						}
+					}
 				}
 			}
-		}
+			wg.Done()
+		}(j)
 	}
+	wg.Wait()
+	sort.Slice(answer, func(i, j int) bool {
+		return answer[i] < answer[j]
+	})
 	return answer, true
 }
 
-func (c *Cuckoo) index(isU bool, x uint32) {
+func (c *Cuckoo) index(isU bool, x uint32) [nx]*bucket {
+	var indexer [nx]*bucket
 	if isU {
 		for i := 0; i < nx; i++ {
-			c.indexer[i] = &c.matrix[x][i]
+			indexer[i] = &c.matrix[x][i]
 		}
-		return
+		return indexer
 	}
 	for i := 0; i < nx; i++ {
-		c.indexer[i] = &c.matrix[i][x]
+		indexer[i] = &c.matrix[i][x]
 	}
+	return indexer
 }
 
 func (c *Cuckoo) buildU() {
-	var nodesU [16]uint64
-	for nonce := uint64(0); nonce < easiness; nonce += 16 {
-		siphashPRF16Seq(&c.sip.v, nonce, 0, &nodesU)
-		for i := range nodesU {
-			u := nodesU[i] & edgemask
-			if u == 0 {
-				continue
+	var wg sync.WaitGroup
+	matrix := make([][nx][nx]bucket, c.ncpu)
+	for j := 0; j < c.ncpu; j++ {
+		for x := 0; x < nx; x++ {
+			for y := 0; y < nx; y++ {
+				matrix[j][x][y] = make(bucket, 0, bigeps/c.ncpu)
 			}
-			ux := (u >> (edgebits - xbits)) & xmask
-			uy := (u >> (edgebits - 2*xbits)) & xmask
-			c.matrix[ux][uy] = append(c.matrix[ux][uy],
-				(nonce+uint64(i))<<32|u)
+		}
+	}
+	steps := easiness / c.ncpu
+	for j := 0; j < c.ncpu; j++ {
+		wg.Add(1)
+		go func(j int) {
+			var nodesU [16]uint64
+			for nonce := uint64(steps * j); nonce < uint64(steps*(j+1)); nonce += 16 {
+				siphashPRF16Seq(&c.sip.v, nonce, 0, &nodesU)
+				for i := range nodesU {
+					u := nodesU[i] & edgemask
+					if u == 0 {
+						continue
+					}
+					ux := (u >> (edgebits - xbits)) & xmask
+					uy := (u >> (edgebits - 2*xbits)) & xmask
+					v := ((nonce + uint64(i)) << 32) | u
+					matrix[j][ux][uy] = append(matrix[j][ux][uy], v)
+				}
+			}
+			wg.Done()
+		}(j)
+	}
+	wg.Wait()
+	for j := 0; j < c.ncpu; j++ {
+		for x := 0; x < nx; x++ {
+			for y := 0; y < nx; y++ {
+				c.matrix[x][y] = append(c.matrix[x][y], matrix[j][x][y]...)
+			}
 		}
 	}
 }
 
 func (c *Cuckoo) buildV() int {
-	var nodesV [16]uint64
-	var nonces [16]uint64
-	var us [16]uint64
-	num := 0
-	var m2 [nx]bucket
-	for i := range m2 {
-		m2[i] = make([]uint64, 0, bigeps)
-	}
-	for ux, mu := range c.matrix {
-		nsip := 0
-		for _, m := range mu {
-			var cnt [nz]byte
-			for _, nu := range m {
-				cnt[nu&zmask]++
+	var wg sync.WaitGroup
+	num := make([]int, c.ncpu)
+	steps := nx / c.ncpu
+	for j := 0; j < c.ncpu; j++ {
+		wg.Add(1)
+		go func(j int) {
+			var nodesV [16]uint64
+			var nonces [16]uint64
+			var us [16]uint64
+			var m2 [nx]bucket
+			for i := range m2 {
+				m2[i] = make([]uint64, 0, bigeps)
 			}
-			for _, nu := range m {
-				if cnt[nu&zmask] == 1 {
-					continue
-				}
-				num++
-				nonces[nsip] = nu >> 32
-				us[nsip] = nu << 32
-				if nsip++; nsip == 16 {
-					nsip = 0
-					siphashPRF16(&c.sip.v, &nonces, 1, &nodesV)
-					for i, v := range nodesV {
-						v &= edgemask
-						vx := (v >> (edgebits - xbits)) & xmask
-						m2[vx] = append(m2[vx], us[i]|v)
+			for ux := j * steps; ux < (j+1)*steps; ux++ {
+				mu := c.matrix[ux]
+				nsip := 0
+				for _, m := range mu {
+					var cnt [nz]byte
+					for _, nu := range m {
+						cnt[nu&zmask]++
+					}
+					for _, nu := range m {
+						if cnt[nu&zmask] == 1 {
+							continue
+						}
+						num[j]++
+						nonces[nsip] = nu >> 32
+						us[nsip] = nu << 32
+						if nsip++; nsip == 16 {
+							nsip = 0
+							siphashPRF16(&c.sip.v, &nonces, 1, &nodesV)
+							for i, v := range nodesV {
+								v &= edgemask
+								vx := (v >> (edgebits - xbits)) & xmask
+								m2[vx] = append(m2[vx], us[i]|v)
+							}
+						}
 					}
 				}
+				siphashPRF16(&c.sip.v, &nonces, 1, &nodesV)
+				for i := 0; i < nsip; i++ {
+					v := nodesV[i] & edgemask
+					vx := (v >> (edgebits - xbits)) & xmask
+					m2[vx] = append(m2[vx], us[i]|v)
+				}
+				c.matrix[ux], m2 = m2, c.matrix[ux]
+				for i := range m2 {
+					m2[i] = m2[i][:0]
+				}
 			}
-		}
-		siphashPRF16(&c.sip.v, &nonces, 1, &nodesV)
-		for i := 0; i < nsip; i++ {
-			v := nodesV[i] & edgemask
-			vx := (v >> (edgebits - xbits)) & xmask
-			m2[vx] = append(m2[vx], us[i]|v)
-		}
-		c.matrix[ux], m2 = m2, c.matrix[ux]
-		for i := range m2 {
-			m2[i] = m2[i][:0]
-		}
+			wg.Done()
+		}(j)
 	}
-	return num
+	wg.Wait()
+	number := 0
+	for j := 0; j < c.ncpu; j++ {
+		number += num[j]
+	}
+	return number
 }
 
 func (c *Cuckoo) trim(isU bool) (int, int) {
-	num := 0
-	maxbucket := 0
-	for ux := uint32(0); ux < nx; ux++ {
-		c.index(isU, ux)
-		for vx := uint32(0); vx < nx; vx++ {
-			m := c.indexer[vx]
-			for _, uv := range *m {
-				y := (uv >> (edgebits - 2*xbits)) & xmask
-				c.m2[y] = append(c.m2[y], uv)
-			}
-			*m = (*m)[:0]
-		}
-		for i, m2y := range c.m2 {
-			var cnt [nz]byte
-			for _, uv := range m2y {
-				cnt[uv&zmask]++
-			}
-			nbucket := 0
-			for _, uv := range m2y {
-				if cnt[uv&zmask] == 1 {
-					continue
+	var wg sync.WaitGroup
+	num := make([]int, c.ncpu)
+	maxbucket := make([]int, c.ncpu)
+	steps := nx / c.ncpu
+
+	for j := 0; j < c.ncpu; j++ {
+		wg.Add(1)
+		go func(j int) {
+			for ux := uint32(j * steps); ux < uint32((j+1)*steps); ux++ {
+				indexer := c.index(isU, ux)
+				for vx := uint32(0); vx < nx; vx++ {
+					m := indexer[vx]
+					for _, uv := range *m {
+						y := (uv >> (edgebits - 2*xbits)) & xmask
+						c.m2[j][y] = append(c.m2[j][y], uv)
+					}
+					*m = (*m)[:0]
 				}
-				nbucket++
-				num++
-				vu := uv >> 32
-				vux := (vu >> (edgebits - xbits)) & xmask
-				ruv := (uv << 32) | vu
-				m := c.indexer[vux]
-				*m = append(*m, ruv)
+				for i, m2y := range c.m2[j] {
+					var cnt [nz]byte
+					for _, uv := range m2y {
+						cnt[uv&zmask]++
+					}
+					nbucket := 0
+					for _, uv := range m2y {
+						if cnt[uv&zmask] == 1 {
+							continue
+						}
+						nbucket++
+						num[j]++
+						vu := uv >> 32
+						vux := (vu >> (edgebits - xbits)) & xmask
+						ruv := (uv << 32) | vu
+						m := indexer[vux]
+						*m = append(*m, ruv)
+					}
+					c.m2[j][i] = c.m2[j][i][:0]
+					if maxbucket[j] < nbucket {
+						maxbucket[j] = nbucket
+					}
+				}
 			}
-			c.m2[i] = c.m2[i][:0]
-			if maxbucket < nbucket {
-				maxbucket = nbucket
-			}
+			wg.Done()
+		}(j)
+	}
+	wg.Wait()
+	number := 0
+	maxb := 0
+	for j := 0; j < c.ncpu; j++ {
+		number += num[j]
+		if maxb < maxbucket[j] {
+			maxb = maxbucket[j]
 		}
 	}
-	return num, maxbucket
+	return number, maxb
 }
 
 func (c *Cuckoo) trimrename0(isU bool) int {
 	num := 0
 	for ux := uint32(0); ux < nx; ux++ {
-		c.index(isU, ux)
+		indexer := c.index(isU, ux)
 		for vx := uint32(0); vx < nx; vx++ {
-			m := c.indexer[vx]
+			m := indexer[vx]
 			for _, uv := range *m {
 				y := (uv >> (edgebits - 2*xbits)) & xmask
-				c.m2[y] = append(c.m2[y], uv)
+				c.m2[0][y] = append(c.m2[0][y], uv)
 			}
 			*m = (*m)[:0]
 		}
-		for i, m2y := range c.m2 {
+		for i, m2y := range c.m2[0] {
 			var nodeid byte
 			var cnt [nz]byte
 			for _, uv := range m2y {
@@ -334,10 +415,10 @@ func (c *Cuckoo) trimrename0(isU bool) int {
 				}
 				vux := (vu >> (allbits - xbits)) & xmask
 				ruv := (newuv << 32) | vu
-				m := c.indexer[vux]
+				m := indexer[vux]
 				*m = append(*m, ruv)
 			}
-			c.m2[i] = c.m2[i][:0]
+			c.m2[0][i] = c.m2[0][i][:0]
 		}
 	}
 	return num
@@ -348,15 +429,15 @@ func (c *Cuckoo) trim2(isU bool) int {
 	m2 := make([]uint64, 0, bigeps)
 	for ux := uint32(0); ux < nx; ux++ {
 		var cnt [1 << (xbits + comp0bits)]byte
-		c.index(isU, ux)
+		indexer := c.index(isU, ux)
 		for vx := uint32(0); vx < nx; vx++ {
-			m := c.indexer[vx]
+			m := indexer[vx]
 			for _, uv := range *m {
 				cnt[uv&ycomp0mask]++
 			}
 		}
 		for vx := uint32(0); vx < nx; vx++ {
-			m := c.indexer[vx]
+			m := indexer[vx]
 			for i := len(*m) - 1; i >= 0; i-- {
 				uv := (*m)[i]
 				if cnt[uv&ycomp0mask] == 1 {
@@ -375,16 +456,16 @@ func (c *Cuckoo) trim2(isU bool) int {
 func (c *Cuckoo) trimrename1(isU bool) int {
 	num := 0
 	for ux := uint32(0); ux < nx; ux++ {
-		c.index(isU, ux)
+		indexer := c.index(isU, ux)
 		for vx := uint32(0); vx < nx; vx++ {
-			m := c.indexer[vx]
+			m := indexer[vx]
 			for _, uv := range *m {
 				y := (uv >> comp0bits) & xmask
-				c.m2[y] = append(c.m2[y], uv)
+				c.m2[0][y] = append(c.m2[0][y], uv)
 			}
 			*m = (*m)[:0]
 		}
-		for i, m2y := range c.m2 {
+		for i, m2y := range c.m2[0] {
 			var nodeid byte
 			var cnt [nz]byte
 			for _, uv := range m2y {
@@ -415,10 +496,10 @@ func (c *Cuckoo) trimrename1(isU bool) int {
 				}
 				vux := (vu >> (nbits + xbits)) & xmask
 				ruv := (newuv << 32) | vu
-				m := c.indexer[vux]
+				m := indexer[vux]
 				*m = append(*m, ruv)
 			}
-			c.m2[i] = c.m2[i][:0]
+			c.m2[0][i] = c.m2[0][i][:0]
 		}
 	}
 	return num
@@ -446,8 +527,12 @@ func (c *Cuckoo) trimmimng() {
 
 //PoW does PoW with hash, which is the key for siphash.
 func (c *Cuckoo) PoW(sipkey []byte) ([]uint32, bool) {
+	for i := 0; i < c.ncpu; i++ {
+		for x := 0; x < nx; x++ {
+			c.m2[i][x] = c.m2[i][x][:0]
+		}
+	}
 	for x := 0; x < nx; x++ {
-		c.m2[x] = c.m2[x][:0]
 		for y := 0; y < nx; y++ {
 			c.matrix[x][y] = c.matrix[x][y][:0]
 		}
