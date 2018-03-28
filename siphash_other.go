@@ -1,4 +1,5 @@
 //+build !amd64
+
 // Copyright (c) 2017 Aidos Developer
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,17 +20,279 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Original license from https://github.com/dchest/siphash
+// Written in 2012 by Dmitry Chestnykh.
+//
+// To the extent possible under law, the author have dedicated all copyright
+// and related and neighboring rights to this software to the public domain
+// worldwide. This software is distributed without any warranty.
+// http://creativecommons.org/publicdomain/zero/1.0/
+
 package cuckoo
 
 func siphashPRF16(v *[4]uint64, nonce *[16]uint64, uorv uint64, result *[16]uint64) {
 	for i := range nonce {
 		b := (nonce[i] << 1) | uorv
-		result[i] = siphashPRF(v, b)
+		v0 := v[0]
+		v1 := v[1]
+		v2 := v[2]
+		v3 := v[3]
+		// Initialization.
+		// Compression.
+		v3 ^= b
+
+		// Round 1.
+		v0 += v1
+		v1 = v1<<13 | v1>>(64-13)
+		v1 ^= v0
+		v0 = v0<<32 | v0>>(64-32)
+
+		v2 += v3
+		v3 = v3<<16 | v3>>(64-16)
+		v3 ^= v2
+
+		v0 += v3
+		v3 = v3<<21 | v3>>(64-21)
+		v3 ^= v0
+
+		v2 += v1
+		v1 = v1<<17 | v1>>(64-17)
+		v1 ^= v2
+		v2 = v2<<32 | v2>>(64-32)
+
+		// Round 2.
+		v0 += v1
+		v1 = v1<<13 | v1>>(64-13)
+		v1 ^= v0
+		v0 = v0<<32 | v0>>(64-32)
+
+		v2 += v3
+		v3 = v3<<16 | v3>>(64-16)
+		v3 ^= v2
+
+		v0 += v3
+		v3 = v3<<21 | v3>>(64-21)
+		v3 ^= v0
+
+		v2 += v1
+		v1 = v1<<17 | v1>>(64-17)
+		v1 ^= v2
+		v2 = v2<<32 | v2>>(64-32)
+
+		v0 ^= b
+
+		// Finalization.
+		v2 ^= 0xff
+
+		// Round 1.
+		v0 += v1
+		v1 = v1<<13 | v1>>(64-13)
+		v1 ^= v0
+		v0 = v0<<32 | v0>>(64-32)
+
+		v2 += v3
+		v3 = v3<<16 | v3>>(64-16)
+		v3 ^= v2
+
+		v0 += v3
+		v3 = v3<<21 | v3>>(64-21)
+		v3 ^= v0
+
+		v2 += v1
+		v1 = v1<<17 | v1>>(64-17)
+		v1 ^= v2
+		v2 = v2<<32 | v2>>(64-32)
+
+		// Round 2.
+		v0 += v1
+		v1 = v1<<13 | v1>>(64-13)
+		v1 ^= v0
+		v0 = v0<<32 | v0>>(64-32)
+
+		v2 += v3
+		v3 = v3<<16 | v3>>(64-16)
+		v3 ^= v2
+
+		v0 += v3
+		v3 = v3<<21 | v3>>(64-21)
+		v3 ^= v0
+
+		v2 += v1
+		v1 = v1<<17 | v1>>(64-17)
+		v1 ^= v2
+		v2 = v2<<32 | v2>>(64-32)
+
+		// Round 3.
+		v0 += v1
+		v1 = v1<<13 | v1>>(64-13)
+		v1 ^= v0
+		v0 = v0<<32 | v0>>(64-32)
+
+		v2 += v3
+		v3 = v3<<16 | v3>>(64-16)
+		v3 ^= v2
+
+		v0 += v3
+		v3 = v3<<21 | v3>>(64-21)
+		v3 ^= v0
+
+		v2 += v1
+		v1 = v1<<17 | v1>>(64-17)
+		v1 ^= v2
+		v2 = v2<<32 | v2>>(64-32)
+
+		// Round 4.
+		v0 += v1
+		v1 = v1<<13 | v1>>(64-13)
+		v1 ^= v0
+		v0 = v0<<32 | v0>>(64-32)
+
+		v2 += v3
+		v3 = v3<<16 | v3>>(64-16)
+		v3 ^= v2
+
+		v0 += v3
+		v3 = v3<<21 | v3>>(64-21)
+		v3 ^= v0
+
+		v2 += v1
+		v1 = v1<<17 | v1>>(64-17)
+		v1 ^= v2
+		v2 = v2<<32 | v2>>(64-32)
+
+		result[i] = v0 ^ v1 ^ v2 ^ v3
 	}
 }
 func siphashPRF16Seq(v *[4]uint64, nonce uint64, uorv uint64, result *[16]uint64) {
 	for i := uint64(0); i < 16; i++ {
 		b := ((nonce + i) << 1) | uorv
-		result[i] = siphashPRF(v, b)
+		v0 := v[0]
+		v1 := v[1]
+		v2 := v[2]
+		v3 := v[3]
+		// Initialization.
+		// Compression.
+		v3 ^= b
+
+		// Round 1.
+		v0 += v1
+		v1 = v1<<13 | v1>>(64-13)
+		v1 ^= v0
+		v0 = v0<<32 | v0>>(64-32)
+
+		v2 += v3
+		v3 = v3<<16 | v3>>(64-16)
+		v3 ^= v2
+
+		v0 += v3
+		v3 = v3<<21 | v3>>(64-21)
+		v3 ^= v0
+
+		v2 += v1
+		v1 = v1<<17 | v1>>(64-17)
+		v1 ^= v2
+		v2 = v2<<32 | v2>>(64-32)
+
+		// Round 2.
+		v0 += v1
+		v1 = v1<<13 | v1>>(64-13)
+		v1 ^= v0
+		v0 = v0<<32 | v0>>(64-32)
+
+		v2 += v3
+		v3 = v3<<16 | v3>>(64-16)
+		v3 ^= v2
+
+		v0 += v3
+		v3 = v3<<21 | v3>>(64-21)
+		v3 ^= v0
+
+		v2 += v1
+		v1 = v1<<17 | v1>>(64-17)
+		v1 ^= v2
+		v2 = v2<<32 | v2>>(64-32)
+
+		v0 ^= b
+
+		// Finalization.
+		v2 ^= 0xff
+
+		// Round 1.
+		v0 += v1
+		v1 = v1<<13 | v1>>(64-13)
+		v1 ^= v0
+		v0 = v0<<32 | v0>>(64-32)
+
+		v2 += v3
+		v3 = v3<<16 | v3>>(64-16)
+		v3 ^= v2
+
+		v0 += v3
+		v3 = v3<<21 | v3>>(64-21)
+		v3 ^= v0
+
+		v2 += v1
+		v1 = v1<<17 | v1>>(64-17)
+		v1 ^= v2
+		v2 = v2<<32 | v2>>(64-32)
+
+		// Round 2.
+		v0 += v1
+		v1 = v1<<13 | v1>>(64-13)
+		v1 ^= v0
+		v0 = v0<<32 | v0>>(64-32)
+
+		v2 += v3
+		v3 = v3<<16 | v3>>(64-16)
+		v3 ^= v2
+
+		v0 += v3
+		v3 = v3<<21 | v3>>(64-21)
+		v3 ^= v0
+
+		v2 += v1
+		v1 = v1<<17 | v1>>(64-17)
+		v1 ^= v2
+		v2 = v2<<32 | v2>>(64-32)
+
+		// Round 3.
+		v0 += v1
+		v1 = v1<<13 | v1>>(64-13)
+		v1 ^= v0
+		v0 = v0<<32 | v0>>(64-32)
+
+		v2 += v3
+		v3 = v3<<16 | v3>>(64-16)
+		v3 ^= v2
+
+		v0 += v3
+		v3 = v3<<21 | v3>>(64-21)
+		v3 ^= v0
+
+		v2 += v1
+		v1 = v1<<17 | v1>>(64-17)
+		v1 ^= v2
+		v2 = v2<<32 | v2>>(64-32)
+
+		// Round 4.
+		v0 += v1
+		v1 = v1<<13 | v1>>(64-13)
+		v1 ^= v0
+		v0 = v0<<32 | v0>>(64-32)
+
+		v2 += v3
+		v3 = v3<<16 | v3>>(64-16)
+		v3 ^= v2
+
+		v0 += v3
+		v3 = v3<<21 | v3>>(64-21)
+		v3 ^= v0
+
+		v2 += v1
+		v1 = v1<<17 | v1>>(64-17)
+		v1 ^= v2
+		v2 = v2<<32 | v2>>(64-32)
+
+		result[i] = v0 ^ v1 ^ v2 ^ v3
 	}
 }

@@ -23,7 +23,10 @@ package cuckoo
 import (
 	"crypto/rand"
 	"encoding/binary"
+	"runtime"
 	"testing"
+
+	"github.com/AidosKuneen/numcpu"
 )
 
 /*
@@ -57,6 +60,8 @@ Verified with cyclehash f01baf5b437888fefb579aab9d492ce20fb59efcbf01561320ef102a
 1 total solutions
 */
 func TestCuckoo(t *testing.T) {
+	n := numcpu.NumCPU()
+	p := runtime.GOMAXPROCS(n)
 	var k0 uint64 = 0xf4956dc403730b01
 	var k1 uint64 = 0xe6d45de39c2a5a3e
 	no := []uint32{
@@ -82,9 +87,12 @@ func TestCuckoo(t *testing.T) {
 	if err := Verify(b, ans); err != nil {
 		t.Error("should be legit, but", err)
 	}
+	runtime.GOMAXPROCS(p)
 }
 
 func TestCuckoo2(t *testing.T) {
+	n := numcpu.NumCPU()
+	p := runtime.GOMAXPROCS(n)
 	b := make([]byte, 16)
 	var found bool
 	var ans []uint32
@@ -104,4 +112,5 @@ func TestCuckoo2(t *testing.T) {
 		t.Log(ans)
 		t.Fatal(err)
 	}
+	runtime.GOMAXPROCS(p)
 }

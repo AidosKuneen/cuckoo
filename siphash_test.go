@@ -1,4 +1,3 @@
-//+build amd64 !noasm !appengine
 // Copyright (c) 2017 Aidos Developer
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy

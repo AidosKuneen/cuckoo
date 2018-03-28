@@ -1,4 +1,5 @@
 //+build amd64 !noasm !appengine
+
 // Copyright (c) 2017 Aidos Developer
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -40,13 +41,6 @@ X12:uorv
 DATA rotate16<>+0x00(SB)/8, $0x0504030201000706
 DATA rotate16<>+0x08(SB)/8, $0x0D0C0B0A09080F0E
 GLOBL rotate16<>(SB), (NOPTR+RODATA), $16
-
-DATA init0<>+0x00(SB)/8, $0x736f6d6570736575
-DATA init0<>+0x08(SB)/8, $0x646f72616e646f6d
-DATA init1<>+0x00(SB)/8, $0x6c7967656e657261
-DATA init1<>+0x08(SB)/8, $0x7465646279746573
-GLOBL init0<>(SB), (NOPTR+RODATA), $16
-GLOBL init1<>(SB), (NOPTR+RODATA), $16
 
 #define ADD(a,b)\
 	PADDQ	b, a
