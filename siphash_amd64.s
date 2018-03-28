@@ -105,8 +105,8 @@ GLOBL rotate16<>(SB), (NOPTR+RODATA), $16
 	MOVOU X0, (BX) \
 	ADDQ $16, BX
 
-//func siphashPRF16(v *[4]uint64, nonce *[16]uint64, uorv uint64, result *[16]uint64)
-TEXT ·siphashPRF16(SB), NOSPLIT, $0
+//func siphashPRF8192(v *[4]uint64, nonce *[8192]uint64, uorv uint64, result *[8192]uint64)
+TEXT ·siphashPRF8192(SB), NOSPLIT, $0
 	MOVQ	$0xff, AX
 	MOVQ	AX, X5
 	MOVLHPS	X5, X5
@@ -129,14 +129,11 @@ TEXT ·siphashPRF16(SB), NOSPLIT, $0
 	MOVLHPS	X11, X11
 	MOVLHPS	X12, X12
 
+	MOVQ $4096,R8
+L1:
 	NSIP //0
-	NSIP //1
-	NSIP //2
-	NSIP //3
-	NSIP //4
-	NSIP //5
-	NSIP //6
-	NSIP //7
+	DECQ R8
+	JNZ L1
 	RET
 
 #define NSIP_SEQ \
@@ -153,8 +150,8 @@ TEXT ·siphashPRF16(SB), NOSPLIT, $0
 	PADDQ	X4, X6 \
 
 
-//func siphashPRF16Seq(v *[4]uint64, nonce uint64, uorv uint64, result *[16]uint64)
-TEXT ·siphashPRF16Seq(SB), NOSPLIT, $0
+//func siphashPRF8192Seq(v *[4]uint64, nonce uint64, uorv uint64, result *[8192]uint64)
+TEXT ·siphashPRF8192Seq(SB), NOSPLIT, $0
 	MOVQ	$0xff, AX
 	MOVQ	AX, X5
 	MOVLHPS	X5, X5
@@ -185,13 +182,10 @@ TEXT ·siphashPRF16Seq(SB), NOSPLIT, $0
 	PSLLQ	$1, X6
 	POR		X12, X6
 
+	MOVQ $4096,R8
+L2:
 	NSIP_SEQ //0
-	NSIP_SEQ //1
-	NSIP_SEQ //2
-	NSIP_SEQ //3
-	NSIP_SEQ //4
-	NSIP_SEQ //5
-	NSIP_SEQ //6
-	NSIP_SEQ //7
+	DECQ R8
+	JNZ L2
 	RET
 

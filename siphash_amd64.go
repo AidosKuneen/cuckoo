@@ -22,5 +22,5 @@
 
 package cuckoo
 
-func siphashPRF16(v *[4]uint64, nonce *[16]uint64, uorv uint64, result *[16]uint64)
-func siphashPRF16Seq(v *[4]uint64, nonce uint64, uorv uint64, result *[16]uint64)
+func siphashPRF8192(v *[4]uint64, nonce *[8192]uint64, uorv uint64, result *[8192]uint64)
+func siphashPRF8192Seq(v *[4]uint64, nonce uint64, uorv uint64, result *[8192]uint64)

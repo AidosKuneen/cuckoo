@@ -1,4 +1,4 @@
-//+build !amd64
+//+build !amd64,!arm,!arm64
 
 // Copyright (c) 2017 Aidos Developer
 
@@ -30,7 +30,7 @@
 
 package cuckoo
 
-func siphashPRF16(v *[4]uint64, nonce *[16]uint64, uorv uint64, result *[16]uint64) {
+func siphashPRF8192(v *[4]uint64, nonce *[8192]uint64, uorv uint64, result *[8192]uint64) {
 	for i := range nonce {
 		b := (nonce[i] << 1) | uorv
 		v0 := v[0]
@@ -163,8 +163,8 @@ func siphashPRF16(v *[4]uint64, nonce *[16]uint64, uorv uint64, result *[16]uint
 		result[i] = v0 ^ v1 ^ v2 ^ v3
 	}
 }
-func siphashPRF16Seq(v *[4]uint64, nonce uint64, uorv uint64, result *[16]uint64) {
-	for i := uint64(0); i < 16; i++ {
+func siphashPRF8192Seq(v *[4]uint64, nonce uint64, uorv uint64, result *[8192]uint64) {
+	for i := uint64(0); i < uint64(len(result)); i++ {
 		b := ((nonce + i) << 1) | uorv
 		v0 := v[0]
 		v1 := v[1]

@@ -171,10 +171,10 @@ func (c *Cuckoo) solution(us []uint32, vs []uint32) ([]uint32, bool) {
 	for j := 0; j < c.ncpu; j++ {
 		wg.Add(1)
 		go func(j int) {
-			var nodesU [16]uint64
-			for nonce := uint64(steps * j); nonce < uint64(steps*(j+1)) && len(answer) < ProofSize; nonce += 16 {
-				siphashPRF16Seq(&c.sip.v, nonce, 0, &nodesU)
-				for i := uint64(0); i < 16; i++ {
+			var nodesU [8192]uint64
+			for nonce := uint64(steps * j); nonce < uint64(steps*(j+1)) && len(answer) < ProofSize; nonce += 8192 {
+				siphashPRF8192Seq(&c.sip.v, nonce, 0, &nodesU)
+				for i := uint64(0); i < 8192; i++ {
 					u0 := nodesU[i] & edgemask
 					if es.uxymap[(u0>>zbits)&xymask] {
 						v0 := siphashPRF(&c.sip.v, ((nonce+i)<<1)|1) & edgemask
@@ -224,9 +224,9 @@ func (c *Cuckoo) buildU() {
 	for j := 0; j < c.ncpu; j++ {
 		wg.Add(1)
 		go func(j int) {
-			var nodesU [16]uint64
-			for nonce := uint64(steps * j); nonce < uint64(steps*(j+1)); nonce += 16 {
-				siphashPRF16Seq(&c.sip.v, nonce, 0, &nodesU)
+			var nodesU [8192]uint64
+			for nonce := uint64(steps * j); nonce < uint64(steps*(j+1)); nonce += 8192 {
+				siphashPRF8192Seq(&c.sip.v, nonce, 0, &nodesU)
 				for i := range nodesU {
 					u := nodesU[i] & edgemask
 					if u == 0 {
@@ -258,9 +258,9 @@ func (c *Cuckoo) buildV() int {
 	for j := 0; j < c.ncpu; j++ {
 		wg.Add(1)
 		go func(j int) {
-			var nodesV [16]uint64
-			var nonces [16]uint64
-			var us [16]uint64
+			var nodesV [8192]uint64
+			var nonces [8192]uint64
+			var us [8192]uint64
 			var m2 [nx]bucket
 			for i := range m2 {
 				m2[i] = make([]uint64, 0, bigeps)
@@ -280,9 +280,9 @@ func (c *Cuckoo) buildV() int {
 						num[j]++
 						nonces[nsip] = nu >> 32
 						us[nsip] = nu << 32
-						if nsip++; nsip == 16 {
+						if nsip++; nsip == 8192 {
 							nsip = 0
-							siphashPRF16(&c.sip.v, &nonces, 1, &nodesV)
+							siphashPRF8192(&c.sip.v, &nonces, 1, &nodesV)
 							for i, v := range nodesV {
 								v &= edgemask
 								vx := (v >> (edgebits - xbits)) & xmask
@@ -291,7 +291,7 @@ func (c *Cuckoo) buildV() int {
 						}
 					}
 				}
-				siphashPRF16(&c.sip.v, &nonces, 1, &nodesV)
+				siphashPRF8192(&c.sip.v, &nonces, 1, &nodesV)
 				for i := 0; i < nsip; i++ {
 					v := nodesV[i] & edgemask
 					vx := (v >> (edgebits - xbits)) & xmask

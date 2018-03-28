@@ -58,18 +58,18 @@ func TestSiphash16(t *testing.T) {
 	v[1] = k1 ^ 0x646f72616e646f6d
 	v[2] = k0 ^ 0x6c7967656e657261
 	v[3] = k1 ^ 0x7465646279746573
-	var nonce [16]uint64
+	var nonce [8192]uint64
 	for i := range nonce {
 		nonce[i] = uint64(rand.Int63())
 	}
 	var uorv uint64 = 1
-	res := make([]uint64, 16)
+	res := make([]uint64, 8192)
 	for i := range res {
 		b := (nonce[i] << 1) | uorv
 		res[i] = siphash(k0, k1, b)
 	}
-	var ts [16]uint64
-	siphashPRF16(&v, &nonce, uorv, &ts)
+	var ts [8192]uint64
+	siphashPRF8192(&v, &nonce, uorv, &ts)
 	for i := range ts {
 		if ts[i] != res[i] {
 			t.Error("invalid siphash16 at", i)
@@ -87,13 +87,13 @@ func TestSiphash16Seq(t *testing.T) {
 	v[3] = k1 ^ 0x7465646279746573
 	nonce := uint64(rand.Int63())
 	var uorv uint64 = 1
-	res := make([]uint64, 16)
+	res := make([]uint64, 8192)
 	for i := range res {
 		b := ((nonce + uint64(i)) << 1) | uorv
 		res[i] = siphash(k0, k1, b)
 	}
-	var ts [16]uint64
-	siphashPRF16Seq(&v, nonce, uorv, &ts)
+	var ts [8192]uint64
+	siphashPRF8192Seq(&v, nonce, uorv, &ts)
 	for i := range ts {
 		if ts[i] != res[i] {
 			t.Error("invalid siphash16 at", i)
@@ -120,14 +120,14 @@ func BenchmarkSiphash16(b *testing.B) {
 	v[1] = k1 ^ 0x646f72616e646f6d
 	v[2] = k0 ^ 0x6c7967656e657261
 	v[3] = k1 ^ 0x7465646279746573
-	var nonce [16]uint64
+	var nonce [8192]uint64
 	for i := range nonce {
 		nonce[i] = uint64(rand.Int63())
 	}
 	var uorv uint64 = 1
 	b.ResetTimer()
-	var ts [16]uint64
+	var ts [8192]uint64
 	for i := 0; i < b.N; i++ {
-		siphashPRF16(&v, &nonce, uorv, &ts)
+		siphashPRF8192(&v, &nonce, uorv, &ts)
 	}
 }
