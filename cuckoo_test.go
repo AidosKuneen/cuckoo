@@ -114,3 +114,17 @@ func TestCuckoo2(t *testing.T) {
 	}
 	runtime.GOMAXPROCS(p)
 }
+func BenchmarkCuckoo2(b *testing.B) {
+	n := numcpu.NumCPU()
+	p := runtime.GOMAXPROCS(n)
+	r := make([]byte, 16)
+	c := NewCuckoo()
+
+	for i := 0; i < b.N; i++ {
+		if _, err := rand.Read(r); err != nil {
+			b.Fatal(err)
+		}
+		c.PoW(r)
+	}
+	runtime.GOMAXPROCS(p)
+}

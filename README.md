@@ -24,8 +24,7 @@ This library uses below parameters.
 * bits of nodes (log2(#nodes)) = 25, memory usage should be around 128MB.
 * easiness = 50% , with edge trimming.
 
-PoW should be finished in around 800mS if it doesn't find solution, 
-and 1 second with solution. So hash based PoW should be added with the PoW.
+PoW should be finished in around 1 second with solution. So hash based PoW should be added with the PoW.
 
 ## Requirements
 
@@ -56,3 +55,24 @@ are required to compile.
 		//failed to verify
 	}
 ```
+
+## Performance
+
+Using the following test environment...
+
+```
+* Compiler: go version go1.10 linux/amd64
+* Kernel: Linux WS777 4.13.5-1-ARCH #1 SMP PREEMPT Fri Oct 6 09:58:47 CEST 2017 x86_64 GNU/Linux
+* CPU:  Celeron(R) CPU G1840 @ 2.80GHz 
+* Memory: 8 GB
+```
+
+```
+goos: linux
+goarch: amd64
+pkg: github.com/AidosKuneen/cuckoo
+BenchmarkCuckoo2-2   	       2	 633949626 ns/op	244375408 B/op	   30199 allocs/op
+PASS
+```
+
+PoW takes around 634 mS.
