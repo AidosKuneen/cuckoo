@@ -23,6 +23,7 @@ package cuckoo
 import (
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"runtime"
 	"testing"
 
@@ -125,6 +126,24 @@ func BenchmarkCuckoo2(b *testing.B) {
 			b.Fatal(err)
 		}
 		c.PoW(r)
+	}
+	runtime.GOMAXPROCS(p)
+}
+
+func BenchmarkCuckooProb(b *testing.B) {
+	n := numcpu.NumCPU()
+	p := runtime.GOMAXPROCS(n)
+	r := make([]byte, 16)
+	c := NewCuckoo()
+
+	for i := 0; i < 1000000; i++ {
+		if _, err := rand.Read(r); err != nil {
+			b.Fatal(err)
+		}
+		_, ok := c.PoW(r)
+		if ok {
+			fmt.Println(i)
+		}
 	}
 	runtime.GOMAXPROCS(p)
 }
