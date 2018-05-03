@@ -96,3 +96,22 @@ PoW takes around 330 mS.
 BenchmarkCuckoo2-16    	       5	 332289248 ns/op	293002734 B/op	   47726 allocs/op
 PASS
 ```
+
+On DIGNO M KYL22(Android Smartphone):
+
+
+
+```
+* Compiler: go version go1.10 linux/arm
+* OS: 	Android 4.2.2
+* CPU:	Qualcomm Snapdragon 800 MSM8974 2.2GHz (quad core)
+* Memory: 2 GB
+```
+
+PoW takes around 2.6 seconds.
+
+
+```
+BenchmarkCuckoo2 	       1	2580786889 ns/op
+PASS
+```
