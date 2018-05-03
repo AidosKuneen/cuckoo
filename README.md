@@ -24,7 +24,7 @@ This library uses below parameters.
 * bits of nodes (log2(#nodes)) = 25, memory usage should be around 128MB.
 * easiness = 50% , with edge trimming.
 
-PoW should be finished in around 1 second with solution. So hash based PoW should be added with the PoW.
+PoW should be finished in 1 second, so hash based PoW should be added with the PoW.
 
 ## Requirements
 
