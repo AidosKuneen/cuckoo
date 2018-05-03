@@ -67,12 +67,28 @@ Using the following test environment...
 * Memory: 8 GB
 ```
 
+PoW takes around 630 mS.
+
+
 ```
-goos: linux
-goarch: amd64
-pkg: github.com/AidosKuneen/cuckoo
 BenchmarkCuckoo2-2   	       2	 633949626 ns/op	244375408 B/op	   30199 allocs/op
 PASS
 ```
 
-PoW takes around 634 mS.
+
+
+On a cloud server:
+
+```
+* Compiler: go version go1.8.1 linux/amd64
+* Kernel: Linux 4.8.0-58-generic #63~16.04.1-Ubuntu SMP Mon Jun 26 18:08:51 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux
+* CPU:  CAMD Ryzen 7 1700X Eight-Core Processor @ 2.20GHz (16 cores)
+* Memory: 64 GB
+```
+
+PoW takes around 330 mS.
+
+```
+BenchmarkCuckoo2-16    	       5	 332289248 ns/op	293002734 B/op	   47726 allocs/op
+PASS
+```
