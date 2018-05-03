@@ -25,6 +25,10 @@ This library uses below parameters.
 * easiness = 50% , with edge trimming.
 
 PoW should be finished in 1 second, so hash based PoW should be added with the PoW.
+The probability of suceeding to find a solution is around 5% and variant is
+also around 5%. So the solution should be found in 20 seconds and 3 sigma
+is 60 seconds.
+
 
 ## Requirements
 
