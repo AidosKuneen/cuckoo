@@ -60,7 +60,7 @@ are required to compile.
 	}
 ```
 
-## Performance
+# Expected PoW Time
 
 Using the following test environment...
 
