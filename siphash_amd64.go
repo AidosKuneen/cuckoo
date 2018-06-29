@@ -22,5 +22,8 @@
 
 package cuckoo
 
+//go:noescape
 func siphashPRF8192(v *[4]uint64, nonce *[8192]uint64, uorv uint64, result *[8192]uint64)
+
+//go:noescape
 func siphashPRF8192Seq(v *[4]uint64, nonce uint64, uorv uint64, result *[8192]uint64)
