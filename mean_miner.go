@@ -24,6 +24,7 @@ package cuckoo
 
 import (
 	"errors"
+	"log"
 	"sort"
 	"sync"
 
@@ -188,6 +189,9 @@ func (c *Cuckoo) solution(us []uint32, vs []uint32) ([]uint32, bool) {
 			}
 			wg.Done()
 		}(j)
+	}
+	if len(answer) != ProofSize {
+		log.Println("invalid proof size!!!!")
 	}
 	wg.Wait()
 	sort.Slice(answer, func(i, j int) bool {
