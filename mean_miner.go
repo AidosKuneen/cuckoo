@@ -190,10 +190,10 @@ func (c *Cuckoo) solution(us []uint32, vs []uint32) ([]uint32, bool) {
 			wg.Done()
 		}(j)
 	}
+	wg.Wait()
 	if len(answer) != ProofSize {
 		log.Println("invalid proof size!!!!")
 	}
-	wg.Wait()
 	sort.Slice(answer, func(i, j int) bool {
 		return answer[i] < answer[j]
 	})
