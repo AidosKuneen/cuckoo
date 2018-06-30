@@ -192,7 +192,7 @@ func (c *Cuckoo) solution(us []uint32, vs []uint32) ([]uint32, bool) {
 	}
 	wg.Wait()
 	if len(answer) != ProofSize {
-		log.Println("invalid proof size!!!!")
+		log.Println("invalid proof size!!!!", len(answer), c.ncpu, easiness, steps)
 	}
 	sort.Slice(answer, func(i, j int) bool {
 		return answer[i] < answer[j]
