@@ -78,6 +78,24 @@ func NewCuckoo() *Cuckoo {
 	}
 	return c
 }
+func newCuckoo(ncpu int) *Cuckoo {
+	c := &Cuckoo{
+		cuckoo: make([]uint32, 1<<17+1),
+		ncpu:   ncpu,
+	}
+	c.m2 = make([][nx]bucket, c.ncpu)
+	for i := 0; i < c.ncpu; i++ {
+		for x := 0; x < nx; x++ {
+			c.m2[i][x] = make(bucket, 0, bigeps)
+		}
+	}
+	for x := 0; x < nx; x++ {
+		for y := 0; y < nx; y++ {
+			c.matrix[x][y] = make([]uint64, 0, bigeps)
+		}
+	}
+	return c
+}
 
 var pathPool = sync.Pool{
 	New: func() interface{} {

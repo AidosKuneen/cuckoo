@@ -98,7 +98,8 @@ func TestCuckoo2(t *testing.T) {
 	var found bool
 	var ans []uint32
 	i := 0
-	c := NewCuckoo()
+	c := newCuckoo(48)
+	c.ncpu = 4
 	for ; !found && i < 1000; i++ {
 		if _, err := rand.Read(b); err != nil {
 			t.Fatal(err)
