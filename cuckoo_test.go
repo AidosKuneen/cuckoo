@@ -91,32 +91,6 @@ func TestCuckoo(t *testing.T) {
 	runtime.GOMAXPROCS(p)
 }
 
-func TestCuckoo2(t *testing.T) {
-	n := numcpu.NumCPU()
-	p := runtime.GOMAXPROCS(n)
-	b := make([]byte, 16)
-	var found bool
-	var ans []uint32
-	i := 0
-	c := newCuckoo(48)
-	c.ncpu = 4
-	for ; !found && i < 1000; i++ {
-		if _, err := rand.Read(b); err != nil {
-			t.Fatal(err)
-		}
-		ans, found = c.PoW(b)
-	}
-	t.Log(i)
-	if !found {
-		t.Fatalf("should be found")
-	}
-	if err := Verify(b, ans); err != nil {
-		t.Log(ans)
-		t.Fatal(err)
-	}
-	runtime.GOMAXPROCS(p)
-}
-
 func BenchmarkCuckoo2(b *testing.B) {
 	n := numcpu.NumCPU()
 	p := runtime.GOMAXPROCS(n)

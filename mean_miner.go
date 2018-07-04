@@ -24,7 +24,6 @@ package cuckoo
 
 import (
 	"errors"
-	"log"
 	"sort"
 	"sync"
 
@@ -65,23 +64,8 @@ func NewCuckoo() *Cuckoo {
 		cuckoo: make([]uint32, 1<<17+1),
 		ncpu:   numcpu.NumCPU(),
 	}
-	c.m2 = make([][nx]bucket, c.ncpu)
-	for i := 0; i < c.ncpu; i++ {
-		for x := 0; x < nx; x++ {
-			c.m2[i][x] = make(bucket, 0, bigeps)
-		}
-	}
-	for x := 0; x < nx; x++ {
-		for y := 0; y < nx; y++ {
-			c.matrix[x][y] = make([]uint64, 0, bigeps)
-		}
-	}
-	return c
-}
-func newCuckoo(ncpu int) *Cuckoo {
-	c := &Cuckoo{
-		cuckoo: make([]uint32, 1<<17+1),
-		ncpu:   ncpu,
+	if c.ncpu > 32 {
+		c.ncpu = 32
 	}
 	c.m2 = make([][nx]bucket, c.ncpu)
 	for i := 0; i < c.ncpu; i++ {
@@ -185,13 +169,18 @@ func (c *Cuckoo) solution(us []uint32, vs []uint32) ([]uint32, bool) {
 	})
 	answer := make([]uint32, 0, ProofSize)
 	steps := easiness / c.ncpu
+	remain := easiness - steps*c.ncpu
 	var wg sync.WaitGroup
 	var mutex sync.Mutex
 	for j := 0; j < c.ncpu; j++ {
 		wg.Add(1)
 		go func(j int) {
 			var nodesU [8192]uint64
-			for nonce := uint64(steps * j); nonce < uint64(steps*(j+1)) && len(answer) < ProofSize; nonce += 8192 {
+			last := uint64(steps * (j + 1))
+			if j == c.ncpu-1 {
+				last += uint64(remain)
+			}
+			for nonce := uint64(steps * j); nonce < last && len(answer) < ProofSize; nonce += 8192 {
 				siphashPRF8192Seq(&c.sip.v, nonce, 0, &nodesU)
 				for i := uint64(0); i < 8192; i++ {
 					u0 := nodesU[i] & edgemask
@@ -209,11 +198,6 @@ func (c *Cuckoo) solution(us []uint32, vs []uint32) ([]uint32, bool) {
 		}(j)
 	}
 	wg.Wait()
-	if len(answer) != ProofSize {
-		log.Println("invalid proof size!!!!", len(answer), c.ncpu, easiness, steps)
-	} else {
-		log.Println("correct", len(answer), c.ncpu, easiness, steps)
-	}
 	sort.Slice(answer, func(i, j int) bool {
 		return answer[i] < answer[j]
 	})
@@ -245,11 +229,16 @@ func (c *Cuckoo) buildU() {
 		}
 	}
 	steps := easiness / c.ncpu
+	remain := easiness - steps*c.ncpu
 	for j := 0; j < c.ncpu; j++ {
 		wg.Add(1)
 		go func(j int) {
+			last := uint64((j + 1) * steps)
+			if j == c.ncpu-1 {
+				last += uint64(remain)
+			}
 			var nodesU [8192]uint64
-			for nonce := uint64(steps * j); nonce < uint64(steps*(j+1)); nonce += 8192 {
+			for nonce := uint64(steps * j); nonce < last; nonce += 8192 {
 				siphashPRF8192Seq(&c.sip.v, nonce, 0, &nodesU)
 				for i := range nodesU {
 					u := nodesU[i] & edgemask
@@ -279,6 +268,7 @@ func (c *Cuckoo) buildV() int {
 	var wg sync.WaitGroup
 	num := make([]int, c.ncpu)
 	steps := nx / c.ncpu
+	remain := nx - steps*c.ncpu
 	for j := 0; j < c.ncpu; j++ {
 		wg.Add(1)
 		go func(j int) {
@@ -289,7 +279,11 @@ func (c *Cuckoo) buildV() int {
 			for i := range m2 {
 				m2[i] = make([]uint64, 0, bigeps)
 			}
-			for ux := j * steps; ux < (j+1)*steps; ux++ {
+			last := (j + 1) * steps
+			if j == c.ncpu-1 {
+				last += remain
+			}
+			for ux := j * steps; ux < last; ux++ {
 				mu := c.matrix[ux]
 				nsip := 0
 				for _, m := range mu {
@@ -342,11 +336,15 @@ func (c *Cuckoo) trim(isU bool) (int, int) {
 	num := make([]int, c.ncpu)
 	maxbucket := make([]int, c.ncpu)
 	steps := nx / c.ncpu
-
+	remain := nx - steps*c.ncpu
 	for j := 0; j < c.ncpu; j++ {
 		wg.Add(1)
 		go func(j int) {
-			for ux := uint32(j * steps); ux < uint32((j+1)*steps); ux++ {
+			last := uint32((j + 1) * steps)
+			if j == c.ncpu-1 {
+				last += uint32(remain)
+			}
+			for ux := uint32(j * steps); ux < last; ux++ {
 				indexer := c.index(isU, ux)
 				for vx := uint32(0); vx < nx; vx++ {
 					m := indexer[vx]
