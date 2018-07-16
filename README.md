@@ -1,6 +1,7 @@
 [![Build Status](https://travis-ci.org/AidosKuneen/cuckoo.svg?branch=master)](https://travis-ci.org/AidosKuneen/cuckoo)
 [![GoDoc](https://godoc.org/github.com/AidosKuneen/cuckoo?status.svg)](https://godoc.org/github.com/AidosKuneen/cuckoo)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/AidosKuneen/cuckoo/master/LICENSE)
+[![Coverage Status](https://coveralls.io/repos/github/AidosKuneen/cuckoo/badge.svg?branch=master)](https://coveralls.io/github/AidosKuneen/cuckoo?branch=master)
 
 
 Cuckoo Cycle
