@@ -10,6 +10,7 @@ before_install:
 - go get -u github.com/mattn/goveralls
 - export PATH=$PATH:$GOPATH/bin
 - gometalinter --install --update
+- go generate -x ./...
 
 script:
 - travis_wait 30 go test ./... -v -covermode=count -coverprofile=coverage.out -timeout 100m
