@@ -1,4 +1,4 @@
-//+build !amd64,!arm,!arm64
+//+build !amd64
 
 // Copyright (c) 2018 Aidos Developer
 
