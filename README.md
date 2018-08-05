@@ -121,7 +121,7 @@ PASS
 ## Dependencies and Licenses
 
 ```
-github.com/AidosKuneen/cuckoo  MIT License (98%)
-github.com/AidosKuneen/numcpu  MIT License (98%)
+github.com/AidosKuneen/cuckoo  MIT License
+github.com/AidosKuneen/numcpu  MIT License
 Golang Standard Library        BSD 3-clause License
 ```
