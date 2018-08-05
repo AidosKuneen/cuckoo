@@ -116,3 +116,10 @@ PoW takes around 2.6 seconds.
 BenchmarkCuckoo2 	       1	2580786889 ns/op
 PASS
 ```
+
+
+# Dependencies and Licenses
+
+github.com/AidosKuneen/cuckoo  MIT License (98%)
+github.com/AidosKuneen/numcpu  MIT License (98%)
+Golang Standard Library        BSD 3-clause License
