@@ -120,6 +120,9 @@ PASS
 
 ## Dependencies and Licenses
 
+This software includes a rewrite (from C++ to go)  of https://github.com/tromp/cuckoo/,
+which is covered by the FAIR MINING license.
+
 ```
 github.com/AidosKuneen/cuckoo  MIT License
 github.com/AidosKuneen/numcpu  MIT License
