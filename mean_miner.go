@@ -83,12 +83,13 @@ func NewCuckoo() *Cuckoo {
 
 var pathPool = sync.Pool{
 	New: func() interface{} {
-		return make([]uint32, 0, maxpath)
+		sl := make([]uint32, 0, maxpath)
+		return &sl
 	},
 }
 
 func (c *Cuckoo) path(u uint32) ([]uint32, error) {
-	us := pathPool.Get().([]uint32)
+	us := *(pathPool.Get().(*[]uint32))
 	us = us[:0]
 	nu := 0
 	for ; u != 0; nu++ {
@@ -593,8 +594,8 @@ func (c *Cuckoo) PoW(sipkey []byte) ([]uint32, bool) {
 					}
 					c.cuckoo[v&xycomp1mask] = u
 				}
-				pathPool.Put(us)
-				pathPool.Put(vs)
+				pathPool.Put(&us)
+				pathPool.Put(&vs)
 			}
 		}
 	}
