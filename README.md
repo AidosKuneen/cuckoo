@@ -72,7 +72,8 @@ Using the following test environment...
 * Memory: 8 GB
 ```
 
-PoW takes around 630 mS.
+One loop in Cuckoo takes around 630 mS.
+(Note that in PoW we need to iterate the loop.)
 
 
 ```
@@ -91,7 +92,7 @@ On a cloud server:
 * Memory: 64 GB
 ```
 
-PoW takes around 330 mS.
+One loop in Cuckoo takes around 330 mS.
 
 ```
 BenchmarkCuckoo2-16    	       5	 332289248 ns/op	293002734 B/op	   47726 allocs/op
@@ -109,7 +110,8 @@ On DIGNO M KYL22(Android Smartphone):
 * Memory: 2 GB
 ```
 
-PoW takes around 2.6 seconds.
+
+One loop in Cuckoo takes around 2.6 seconds.
 
 
 ```
