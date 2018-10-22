@@ -61,7 +61,7 @@ are required to compile.
 	}
 ```
 
-## Expected PoW Time
+## Cuckoo Time
 
 Using the following test environment...
 
