@@ -181,7 +181,8 @@ func (c *Cuckoo) solution(us []uint32, vs []uint32) ([]uint32, bool) {
 			if j == c.ncpu-1 {
 				last += uint64(remain)
 			}
-			for nonce := uint64(steps * j); nonce < last && len(answer) < ProofSize; nonce += 8192 {
+		loop:
+			for nonce := uint64(steps * j); nonce < last; nonce += 8192 {
 				siphashPRF8192Seq(&c.sip.v, nonce, 0, &nodesU)
 				for i := uint64(0); i < 8192; i++ {
 					u0 := nodesU[i] & edgemask
@@ -190,6 +191,10 @@ func (c *Cuckoo) solution(us []uint32, vs []uint32) ([]uint32, bool) {
 						if es.find((u0<<32)|v0, 0, len(es.edge)-1) {
 							mutex.Lock()
 							answer = append(answer, uint32(nonce+i))
+							if len(answer) >= ProofSize {
+								mutex.Unlock()
+								break loop
+							}
 							mutex.Unlock()
 						}
 					}
