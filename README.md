@@ -3,6 +3,7 @@
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/AidosKuneen/cuckoo/master/LICENSE)
 [![Coverage Status](https://coveralls.io/repos/github/AidosKuneen/cuckoo/badge.svg?branch=master)](https://coveralls.io/github/AidosKuneen/cuckoo?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/AidosKuneen/cuckoo)](https://goreportcard.com/report/github.com/AidosKuneen/cuckoo)
+
 Cuckoo Cycle
 =====
 
