@@ -24,11 +24,11 @@
 package cuckoo
 
 import (
-	"errors"
 	"sort"
 	"sync"
 
 	"github.com/AidosKuneen/numcpu"
+	"github.com/pkg/errors"
 )
 
 type bucket []uint64

@@ -21,7 +21,7 @@
 package cuckoo
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 )
 
 const (
