@@ -14,8 +14,8 @@ before_install:
 - mkdir go-tools
 - cd go-tools
 - go mod init go-tools
-- cd ..
 - go get -u github.com/mattn/goveralls
+- cd ..
 - curl -L https://git.io/vp6lP | sh
 - popd
 - go generate -x ./...
