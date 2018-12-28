@@ -18,7 +18,7 @@ before_install:
 - cd ..
 - curl -L https://git.io/vp6lP | sh
 - popd
-- go generate -x ./...
+- env GO111MODULE=off go generate ./...
 
 script:
 - go build
