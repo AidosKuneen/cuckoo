@@ -10,8 +10,12 @@ install:
 
 before_install:
 - export PATH=$PATH:$GOPATH/bin
-- go get -u github.com/mattn/goveralls
 - pushd $GOPATH
+- mkdir go-tools
+- cd go-tools
+- go mod init go-tools
+- cd ..
+- go get -u github.com/mattn/goveralls
 - curl -L https://git.io/vp6lP | sh
 - popd
 - go generate -x ./...
