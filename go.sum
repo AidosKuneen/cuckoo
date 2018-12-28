@@ -4,3 +4,5 @@ github.com/AidosKuneen/numcpu v0.0.0-20181228055030-f983fa4a1deb h1:EGqbUkwWDGM9
 github.com/AidosKuneen/numcpu v0.0.0-20181228055030-f983fa4a1deb/go.mod h1:6JNUqe35uC3v1izjG0X+PJh3l9pejZmzx3zc/GZtB4M=
 github.com/pkg/errors v0.8.0 h1:WdK/asTD0HN+q6hsWO3/vpuAkAr+tw6aNJNDFFf0+qw=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+github.com/pkg/errors v0.8.1-0.20181023235946-059132a15dd0 h1:TVdhkEP0WKajbywS5TEDWwuzCl9EqOcQ6b1ymfmx/6E=
+github.com/pkg/errors v0.8.1-0.20181023235946-059132a15dd0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

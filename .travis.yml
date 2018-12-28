@@ -6,10 +6,11 @@ go:
 install:
 
 before_install:
-- go get -u github.com/alecthomas/gometalinter
-- go get -u github.com/mattn/goveralls
 - export PATH=$PATH:$GOPATH/bin
-- gometalinter --install --update
+- go get -u github.com/mattn/goveralls
+- pushd $GOPATH
+- curl -L https://git.io/vp6lP | sh
+- popd
 - go generate -x ./...
 
 script:
