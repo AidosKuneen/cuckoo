@@ -3,6 +3,9 @@ language: go
 go:
 - "1.11.x"
 
+env:
+- GO111MODULE=on 
+
 install:
 
 before_install:
@@ -14,8 +17,8 @@ before_install:
 - go generate -x ./...
 
 script:
-- env GO111MODULE=on go build
-- travis_wait 30  env GO111MODULE=on go test ./... -v -covermode=count -coverprofile=coverage.out -timeout 100m
+- go build
+- travis_wait 30  go test ./... -v -covermode=count -coverprofile=coverage.out -timeout 100m
 
 after_success:
 - gometalinter -e bindata --deadline=1000s ./...
