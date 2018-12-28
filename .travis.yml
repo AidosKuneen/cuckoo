@@ -22,5 +22,5 @@ script:
 
 after_success:
 - go mod vendor
-- env GO111MODULE=off gometalinter  --deadline=1000s ./...
+- env GO111MODULE=off gometalinter -e vendor --deadline=1000s ./...
 - goveralls -coverprofile=coverage.out -service=travis-ci
