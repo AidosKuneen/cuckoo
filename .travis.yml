@@ -21,5 +21,6 @@ script:
 - travis_wait 30  go test ./... -v -covermode=count -coverprofile=coverage.out -timeout 100m
 
 after_success:
-- gometalinter -e bindata --deadline=1000s ./...
+- go mod vendor
+- env GO111MODULE=off gometalinter  --deadline=1000s ./...
 - goveralls -coverprofile=coverage.out -service=travis-ci
