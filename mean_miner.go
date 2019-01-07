@@ -57,13 +57,23 @@ type Cuckoo struct {
 	matrix [nx][nx]bucket
 	ncpu   int
 	m2     [][nx]bucket
+
+	us      []uint32
+	vs      []uint32
+	matrixs [][nx][nx]bucket
+	m2tmp   [][nx]bucket
 }
 
 //NewCuckoo reeturns Cuckoo struct to do PoW.
 func NewCuckoo() *Cuckoo {
+	ncpu := numcpu.NumCPU()
 	c := &Cuckoo{
-		cuckoo: make([]uint32, 1<<17+1),
-		ncpu:   numcpu.NumCPU(),
+		cuckoo:  make([]uint32, 1<<17+1),
+		ncpu:    ncpu,
+		us:      make([]uint32, 0, maxpath),
+		vs:      make([]uint32, 0, maxpath),
+		matrixs: make([][nx][nx]bucket, ncpu),
+		m2tmp:   make([][nx]bucket, ncpu),
 	}
 	if c.ncpu > 32 {
 		c.ncpu = 32
@@ -79,18 +89,22 @@ func NewCuckoo() *Cuckoo {
 			c.matrix[x][y] = make([]uint64, 0, bigeps)
 		}
 	}
+	for j := 0; j < c.ncpu; j++ {
+		for x := 0; x < nx; x++ {
+			for y := 0; y < nx; y++ {
+				c.matrixs[j][x][y] = make(bucket, 0, bigeps/c.ncpu)
+			}
+		}
+	}
+	for j := 0; j < c.ncpu; j++ {
+		for i := range c.m2tmp[j] {
+			c.m2tmp[j][i] = make([]uint64, 0, bigeps)
+		}
+	}
 	return c
 }
 
-var pathPool = sync.Pool{
-	New: func() interface{} {
-		sl := make([]uint32, 0, maxpath)
-		return &sl
-	},
-}
-
-func (c *Cuckoo) path(u uint32) ([]uint32, error) {
-	us := *(pathPool.Get().(*[]uint32))
+func (c *Cuckoo) path(u uint32, us []uint32) ([]uint32, error) {
 	us = us[:0]
 	nu := 0
 	for ; u != 0; nu++ {
@@ -227,11 +241,10 @@ func (c *Cuckoo) index(isU bool, x uint32) [nx]*bucket {
 
 func (c *Cuckoo) buildU() {
 	var wg sync.WaitGroup
-	matrix := make([][nx][nx]bucket, c.ncpu)
 	for j := 0; j < c.ncpu; j++ {
 		for x := 0; x < nx; x++ {
 			for y := 0; y < nx; y++ {
-				matrix[j][x][y] = make(bucket, 0, bigeps/c.ncpu)
+				c.matrixs[j][x][y] = c.matrixs[j][x][y][:0]
 			}
 		}
 	}
@@ -255,7 +268,7 @@ func (c *Cuckoo) buildU() {
 					ux := (u >> (edgebits - xbits)) & xmask
 					uy := (u >> (edgebits - 2*xbits)) & xmask
 					v := ((nonce + uint64(i)) << 32) | u
-					matrix[j][ux][uy] = append(matrix[j][ux][uy], v)
+					c.matrixs[j][ux][uy] = append(c.matrixs[j][ux][uy], v)
 				}
 			}
 			wg.Done()
@@ -265,7 +278,7 @@ func (c *Cuckoo) buildU() {
 	for j := 0; j < c.ncpu; j++ {
 		for x := 0; x < nx; x++ {
 			for y := 0; y < nx; y++ {
-				c.matrix[x][y] = append(c.matrix[x][y], matrix[j][x][y]...)
+				c.matrix[x][y] = append(c.matrix[x][y], c.matrixs[j][x][y]...)
 			}
 		}
 	}
@@ -282,9 +295,8 @@ func (c *Cuckoo) buildV() int {
 			var nodesV [8192]uint64
 			var nonces [8192]uint64
 			var us [8192]uint64
-			var m2 [nx]bucket
-			for i := range m2 {
-				m2[i] = make([]uint64, 0, bigeps)
+			for i := range c.m2tmp[j] {
+				c.m2tmp[j][i] = c.m2tmp[j][i][:0]
 			}
 			last := (j + 1) * steps
 			if j == c.ncpu-1 {
@@ -311,7 +323,7 @@ func (c *Cuckoo) buildV() int {
 							for i, v := range nodesV {
 								v &= edgemask
 								vx := (v >> (edgebits - xbits)) & xmask
-								m2[vx] = append(m2[vx], us[i]|v)
+								c.m2tmp[j][vx] = append(c.m2tmp[j][vx], us[i]|v)
 							}
 						}
 					}
@@ -320,11 +332,11 @@ func (c *Cuckoo) buildV() int {
 				for i := 0; i < nsip; i++ {
 					v := nodesV[i] & edgemask
 					vx := (v >> (edgebits - xbits)) & xmask
-					m2[vx] = append(m2[vx], us[i]|v)
+					c.m2tmp[j][vx] = append(c.m2tmp[j][vx], us[i]|v)
 				}
-				c.matrix[ux], m2 = m2, c.matrix[ux]
-				for i := range m2 {
-					m2[i] = m2[i][:0]
+				c.matrix[ux], c.m2tmp[j] = c.m2tmp[j], c.matrix[ux]
+				for i := range c.m2tmp[j] {
+					c.m2tmp[j][i] = c.m2tmp[j][i][:0]
 				}
 			}
 			wg.Done()
@@ -455,7 +467,7 @@ func (c *Cuckoo) trimrename0(isU bool) int {
 
 func (c *Cuckoo) trim2(isU bool) int {
 	num := 0
-	m2 := make([]uint64, 0, bigeps)
+	c.m2tmp[0][0] = c.m2tmp[0][0][:0]
 	for ux := uint32(0); ux < nx; ux++ {
 		var cnt [1 << (xbits + comp0bits)]byte
 		indexer := c.index(isU, ux)
@@ -473,10 +485,10 @@ func (c *Cuckoo) trim2(isU bool) int {
 					continue
 				}
 				num++
-				m2 = append(m2, (uv<<32)|(uv>>32))
+				c.m2tmp[0][0] = append(c.m2tmp[0][0], (uv<<32)|(uv>>32))
 			}
-			*m, m2 = m2, *m
-			m2 = m2[:0]
+			*m, c.m2tmp[0][0] = c.m2tmp[0][0], *m
+			c.m2tmp[0][0] = c.m2tmp[0][0][:0]
 		}
 	}
 	return num
@@ -578,8 +590,8 @@ func (c *Cuckoo) PoW(sipkey []byte) ([]uint32, bool) {
 			for _, uv := range m {
 				u := uint32(uv>>32) << 1
 				v := (uint32(uv) << 1) | 1
-				us, err1 := c.path(u)
-				vs, err2 := c.path(v)
+				us, err1 := c.path(u, c.us)
+				vs, err2 := c.path(v, c.vs)
 				if err1 != nil || err2 != nil {
 					continue
 				}
@@ -600,8 +612,6 @@ func (c *Cuckoo) PoW(sipkey []byte) ([]uint32, bool) {
 					}
 					c.cuckoo[v&xycomp1mask] = u
 				}
-				pathPool.Put(&us)
-				pathPool.Put(&vs)
 			}
 		}
 	}

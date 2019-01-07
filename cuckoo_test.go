@@ -76,17 +76,19 @@ func TestCuckoo(t *testing.T) {
 	binary.LittleEndian.PutUint64(b, k0)
 	binary.LittleEndian.PutUint64(b[8:], k1)
 	c := NewCuckoo()
-	ans, found := c.PoW(b)
-	if !found {
-		t.Fatalf("should be found")
-	}
-	for i, v := range ans {
-		if v != no[i] {
-			t.Error("nonce is incorrect")
+	for i := 0; i < 10; i++ {
+		ans, found := c.PoW(b)
+		if !found {
+			t.Fatalf("should be found")
 		}
-	}
-	if err := Verify(b, ans); err != nil {
-		t.Error("should be legit, but", err)
+		for i, v := range ans {
+			if v != no[i] {
+				t.Error("nonce is incorrect")
+			}
+		}
+		if err := Verify(b, ans); err != nil {
+			t.Error("should be legit, but", err)
+		}
 	}
 	runtime.GOMAXPROCS(p)
 }
