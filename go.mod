@@ -1,6 +1,8 @@
 module github.com/AidosKuneen/cuckoo
 
+go 1.15
+
 require (
-	github.com/AidosKuneen/numcpu v0.0.0-20181228120708-3060e816f1ca
-	github.com/pkg/errors v0.8.1-0.20181023235946-059132a15dd0
+	github.com/AidosKuneen/numcpu v0.0.0-20210210150138-97011676ebca
+	github.com/pkg/errors v0.9.1
 )
