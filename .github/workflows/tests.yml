@@ -1,0 +1,29 @@
+name: Tests
+on: [ push, pull_request ]
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.x
+      - name: Format
+        run: if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then exit 1; fi
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.x
+      - uses: actions/checkout@v2
+      - name: Run Tests
+        run: go test -v -coverprofile=profile.cov -json ./... > tests_report.json
+      - name: Annotate GH commit or PR
+        uses: guyarb/golang-test-annoations@v0.3.0
+        with:
+          test-results: tests_report.json
+      - name: Tests Coverage
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: profile.cov
